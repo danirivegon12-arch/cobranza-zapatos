@@ -43,7 +43,7 @@
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
-    <!-- Datalists globales (ESTO ES LO QUE FALTABA Y CONGELABA TU APP) -->
+    <!-- Datalists globales -->
     <datalist id="clientes-datalist"></datalist>
     <datalist id="tiendas-existentes"></datalist>
     <datalist id="colonias-existentes"></datalist>
@@ -190,6 +190,10 @@
         <div class="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
             <select id="filter-tienda-pedidos" onchange="renderPedidos()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full flex-grow"></select>
             
+            <select id="filter-cliente-pedidos" onchange="renderPedidos()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full flex-grow">
+                <option value="Todos">Todos los Clientes</option>
+            </select>
+            
             <button onclick="generarPDFPedidos()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-3 rounded-xl font-black text-[10px] shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors flex-shrink-0" title="Exportar lista de pedidos según la tienda seleccionada">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
                 PDF Pedidos
@@ -230,6 +234,10 @@
                 
                 <select id="filter-tienda-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto"></select>
                 
+                <select id="filter-cliente-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto">
+                    <option value="Todos">Todos los Clientes</option>
+                </select>
+
                 <select id="filter-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto">
                     <option value="Todos">Todos los Estados</option>
                     <option value="Bodega">Solo Bodega</option>
@@ -449,6 +457,17 @@
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">¿Para quién es? (Opcional o Nota)</label>
                     <input type="text" id="z-destinatario" list="clientes-datalist" placeholder="Nombre real o descripción libre..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-rose-500 outline-none" autocomplete="off">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Precio Acordado ($)</label>
+                        <input type="number" id="z-precio-acordado" step="0.5" placeholder="0.00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Detalles / Notas</label>
+                        <input type="text" id="z-detalles" placeholder="Ej. Urgente, sin caja..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -1470,35 +1489,52 @@
                 margin: 0.5, 
                 filename: `EstadoCuenta_${cliente.nombre.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true }, 
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1024 }, 
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
         }
 
         // ================= PEDIDOS / ENCARGOS =================
         function actualizarFiltrosPedidos() {
-            const selectFiltro = document.getElementById('filter-tienda-pedidos');
+            // Actualizar filtro de tiendas
+            const selectFiltroTienda = document.getElementById('filter-tienda-pedidos');
             const tiendas = [...new Set(dbZapatos.filter(z => z.estado === 'Pedido').map(z => z.tienda))].filter(Boolean).sort();
             
-            let val = selectFiltro.value || 'Todas'; 
-            selectFiltro.innerHTML = '<option value="Todas">Todas las Tiendas (Filtro)</option>' + 
+            let valTienda = selectFiltroTienda.value || 'Todas'; 
+            selectFiltroTienda.innerHTML = '<option value="Todas">Todas las Tiendas (Filtro)</option>' + 
                                      tiendas.map(t => `<option value="${t}">${t}</option>`).join('');
-            if(tiendas.includes(val)) {
-                selectFiltro.value = val; 
-            } else {
-                selectFiltro.value = 'Todas';
-            }
+            if(tiendas.includes(valTienda)) selectFiltroTienda.value = valTienda; 
+            else selectFiltroTienda.value = 'Todas';
+
+            // Actualizar filtro de clientes
+            const selectFiltroCliente = document.getElementById('filter-cliente-pedidos');
+            const pedidos = dbZapatos.filter(z => z.estado === 'Pedido');
+            const clientesIds = [...new Set(pedidos.map(z => z.clienteId))].filter(Boolean);
+            const clientesNombres = clientesIds.map(id => getClienteNombre(id)).sort();
+
+            let valCliente = selectFiltroCliente.value || 'Todos';
+            selectFiltroCliente.innerHTML = '<option value="Todos">Todos los Clientes</option>' + 
+                                     clientesNombres.map(c => `<option value="${c}">${c}</option>`).join('');
+            if(clientesNombres.includes(valCliente)) selectFiltroCliente.value = valCliente;
+            else selectFiltroCliente.value = 'Todos';
         }
 
         function renderPedidos() {
             const list = document.getElementById('lista-pedidos');
             const filterTienda = document.getElementById('filter-tienda-pedidos').value;
+            const filterCliente = document.getElementById('filter-cliente-pedidos').value;
+            
             let pedidos = dbZapatos.filter(z => z.estado === 'Pedido');
-            document.getElementById('stat-total-pedidos').innerText = pedidos.length;
-
+            
             if (!(!filterTienda || filterTienda === 'Todas')) {
                 pedidos = pedidos.filter(z => z.tienda === filterTienda);
             }
+            if (!(!filterCliente || filterCliente === 'Todos')) {
+                pedidos = pedidos.filter(z => z.clienteId && getClienteNombre(z.clienteId) === filterCliente);
+            }
+
+            document.getElementById('stat-total-pedidos').innerText = pedidos.length;
             pedidos.sort((a, b) => new Date(b.fechaLlegada) - new Date(a.fechaLlegada));
             
             if (pedidos.length === 0) { 
@@ -1508,6 +1544,9 @@
 
             list.innerHTML = pedidos.map(z => {
                 const destinatario = z.clienteId ? getClienteNombre(z.clienteId) : 'Libre (Sin Asignar)';
+                const precioBadge = z.precioAcordado ? `<p class="text-xs font-black text-emerald-600 mt-1">Precio: ${money(z.precioAcordado)}</p>` : '';
+                const detallesBadge = z.detalles ? `<p class="text-[10px] font-bold text-slate-500 mt-1 italic leading-tight">Nota: ${z.detalles}</p>` : '';
+
                 return `
                 <div class="bg-white rounded-2xl p-4 border border-blue-200 shadow-sm relative flex flex-col gap-3 hover:shadow-md transition-shadow">
                     <div>
@@ -1515,6 +1554,8 @@
                         <p class="font-black text-slate-800 text-lg leading-none">${z.modelo}</p>
                         <p class="text-xs font-bold text-slate-500 mt-1">${z.marca || 'S/M'} • Talla: <span class="text-blue-600 px-1 bg-blue-50 rounded">${z.talla}</span></p>
                         <p class="text-xs font-bold text-slate-500 mt-0.5">Color: <span class="text-slate-800 uppercase">${z.color}</span></p>
+                        ${precioBadge}
+                        ${detallesBadge}
                     </div>
                     <div class="bg-blue-50 border border-blue-100 p-2 rounded-lg mt-1">
                         <p class="text-[9px] font-black text-blue-400 uppercase">Para el cliente:</p>
@@ -1545,12 +1586,13 @@
 
         function generarPDFPedidos() {
             const filterTienda = document.getElementById('filter-tienda-pedidos').value;
+            const filterCliente = document.getElementById('filter-cliente-pedidos').value;
             let pedidos = dbZapatos.filter(z => z.estado === 'Pedido');
             const isTodas = !filterTienda || filterTienda === 'Todas';
+            const isTodosClientes = !filterCliente || filterCliente === 'Todos';
             
-            if (!isTodas) {
-                pedidos = pedidos.filter(z => z.tienda === filterTienda);
-            }
+            if (!isTodas) pedidos = pedidos.filter(z => z.tienda === filterTienda);
+            if (!isTodosClientes) pedidos = pedidos.filter(z => z.clienteId && getClienteNombre(z.clienteId) === filterCliente);
             
             if(pedidos.length === 0) { 
                 alert("No hay encargos en la lista para exportar."); 
@@ -1559,7 +1601,12 @@
             
             pedidos.sort((a, b) => new Date(b.fechaLlegada) - new Date(a.fechaLlegada));
             
-            const tituloDoc = `Encargos / Pedidos ${!isTodas ? '- ' + filterTienda : ''}`;
+            let subTitulo = [];
+            if (!isTodas) subTitulo.push(`Tienda: ${filterTienda}`);
+            if (!isTodosClientes) subTitulo.push(`Cliente: ${filterCliente}`);
+            const tituloFinal = subTitulo.length > 0 ? `- ${subTitulo.join(' | ')}` : '';
+
+            const tituloDoc = `Encargos / Pedidos ${tituloFinal}`;
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
@@ -1570,52 +1617,61 @@
                         <thead>
                             <tr style="background-color: #eff6ff; text-align: left; border-bottom: 2px solid #bfdbfe;">
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
-                                <th style="padding: 10px; border: 1px solid #e2e8f0;">Marca</th>
-                                <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo / ID</th>
+                                <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo / Marca</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Talla / Color</th>
+                                <th style="padding: 10px; border: 1px solid #e2e8f0;">Detalles / Precio</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Para Cliente</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${pedidos.map(z => `
-                            <tr style="border-bottom: 1px solid #e2e8f0;">
-                                <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
-                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
-                                <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${z.modelo}</td>
-                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
-                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</td>
-                            </tr>`).join('')}
+                            ${pedidos.map(z => {
+                                const pStr = z.precioAcordado ? `<span style="color:#059669; font-weight:bold;">${money(z.precioAcordado)}</span>` : '';
+                                const dStr = z.detalles ? `<br><span style="font-size:10px; color:#64748b; font-style:italic;">${z.detalles}</span>` : '';
+                                return `
+                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                    <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong><br><span style="color: #475569; font-size:10px;">${z.marca || 'S/M'}</span></td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${pStr}${dStr}</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</td>
+                                </tr>`;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>`;
             
             html2pdf().set({ 
                 margin: 0.5, 
-                filename: `Encargos_${filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
-                html2canvas: { scale: 2 }, 
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
+                filename: `Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
+                html2canvas: { scale: 2, windowWidth: 1024 }, 
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
         }
 
         // ================= BODEGA =================
         function actualizarFiltrosBodega() {
-            const listData = document.getElementById('tiendas-existentes');
-            const selectFiltro = document.getElementById('filter-tienda-bodega');
+            // Actualizar filtro de tiendas
+            const selectFiltroTienda = document.getElementById('filter-tienda-bodega');
             const tiendas = [...new Set(dbZapatos.map(z => z.tienda))].filter(Boolean).sort();
             
-            if(listData) {
-                listData.innerHTML = tiendas.map(t => `<option value="${t}">`).join('');
-            }
-            
-            let val = selectFiltro.value || 'Todas'; 
-            selectFiltro.innerHTML = '<option value="Todas">Todas las Tiendas</option>' + 
+            let valTienda = selectFiltroTienda.value || 'Todas'; 
+            selectFiltroTienda.innerHTML = '<option value="Todas">Todas las Tiendas</option>' + 
                                      tiendas.map(t => `<option value="${t}">${t}</option>`).join('');
-            
-            if(tiendas.includes(val)) {
-                selectFiltro.value = val; 
-            } else {
-                selectFiltro.value = 'Todas';
-            }
+            if(tiendas.includes(valTienda)) selectFiltroTienda.value = valTienda; 
+            else selectFiltroTienda.value = 'Todas';
+
+            // Actualizar filtro de clientes
+            const selectFiltroCliente = document.getElementById('filter-cliente-bodega');
+            const bodegaItems = dbZapatos.filter(z => z.estado === 'Bodega' || z.estado === 'Asignado' || z.estado === 'Devolución');
+            const clientesIds = [...new Set(bodegaItems.map(z => z.clienteId))].filter(Boolean);
+            const clientesNombres = clientesIds.map(id => getClienteNombre(id)).sort();
+
+            let valCliente = selectFiltroCliente.value || 'Todos';
+            selectFiltroCliente.innerHTML = '<option value="Todos">Todos los Clientes</option>' + 
+                                     clientesNombres.map(c => `<option value="${c}">${c}</option>`).join('');
+            if(clientesNombres.includes(valCliente)) selectFiltroCliente.value = valCliente;
+            else selectFiltroCliente.value = 'Todos';
         }
 
         function toggleFechaModal() {
@@ -1642,6 +1698,8 @@
                 document.getElementById('z-color').value = z.color || ''; 
                 document.getElementById('z-fecha').value = z.fechaLlegada;
                 document.getElementById('z-estado').value = z.estado; 
+                document.getElementById('z-precio-acordado').value = z.precioAcordado || '';
+                document.getElementById('z-detalles').value = z.detalles || '';
                 
                 if (z.clienteId) {
                     const c = dbClientes.find(x => x.id === z.clienteId);
@@ -1659,6 +1717,8 @@
                 document.getElementById('zapato-id').value = ''; 
                 document.getElementById('titulo-zapato').innerText = "Nuevo Registro";
                 document.getElementById('z-destinatario').value = '';
+                document.getElementById('z-precio-acordado').value = '';
+                document.getElementById('z-detalles').value = '';
                 selectTalla.value = ""; 
                 if(forceEstado) document.getElementById('z-estado').value = forceEstado;
             }
@@ -1671,6 +1731,7 @@
             const id = document.getElementById('zapato-id').value;
             const estadoSel = document.getElementById('z-estado').value;
             const destName = document.getElementById('z-destinatario').value.trim().toUpperCase();
+            const pAcordado = parseFloat(document.getElementById('z-precio-acordado').value);
 
             let destId = null;
             if (destName) {
@@ -1693,7 +1754,9 @@
                 estado: estadoSel, 
                 clienteId: destId, 
                 precioVenta: null, 
-                fechaAsignacion: null
+                fechaAsignacion: null,
+                precioAcordado: isNaN(pAcordado) ? null : pAcordado,
+                detalles: document.getElementById('z-detalles').value.trim()
             };
 
             if (id) {
@@ -1743,6 +1806,7 @@
         function setFiltroBodega(estado) {
             document.getElementById('filter-bodega').value = estado;
             document.getElementById('filter-tienda-bodega').value = 'Todas'; 
+            document.getElementById('filter-cliente-bodega').value = 'Todos'; 
             document.getElementById('search-bodega').value = '';
             renderBodega(); 
             document.getElementById('filter-bodega').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1753,9 +1817,11 @@
             const search = document.getElementById('search-bodega').value.toLowerCase();
             const filterEstado = document.getElementById('filter-bodega').value;
             const filterTienda = document.getElementById('filter-tienda-bodega').value;
+            const filterCliente = document.getElementById('filter-cliente-bodega').value;
 
             const isTodosEstado = !filterEstado || filterEstado === 'Todos';
             const isTodasTienda = !filterTienda || filterTienda === 'Todas';
+            const isTodosCliente = !filterCliente || filterCliente === 'Todos';
 
             let filtered = dbZapatos.filter(z => {
                 if(z.estado === 'Pedido') return false;
@@ -1774,7 +1840,9 @@
                 }
                 
                 const matchTienda = isTodasTienda || z.tienda === filterTienda;
-                return txt.includes(search) && matchEstado && matchTienda;
+                const matchCliente = isTodosCliente || (z.clienteId && getClienteNombre(z.clienteId) === filterCliente);
+
+                return txt.includes(search) && matchEstado && matchTienda && matchCliente;
             });
 
             filtered.sort((a, b) => new Date(b.fechaLlegada) - new Date(a.fechaLlegada));
@@ -1847,8 +1915,11 @@
         function generarPDFBodega() {
             const filterTienda = document.getElementById('filter-tienda-bodega').value;
             const filterEstado = document.getElementById('filter-bodega').value;
+            const filterCliente = document.getElementById('filter-cliente-bodega').value;
+            
             const isTodasTienda = !filterTienda || filterTienda === 'Todas';
             const isTodosEstado = !filterEstado || filterEstado === 'Todos';
+            const isTodosCliente = !filterCliente || filterCliente === 'Todos';
 
             let zapatos = dbZapatos.filter(z => {
                 if(z.estado === 'Pedido') return false;
@@ -1864,7 +1935,9 @@
                 }
 
                 let matchTienda = isTodasTienda || z.tienda === filterTienda;
-                return matchEstado && matchTienda;
+                let matchCliente = isTodosCliente || (z.clienteId && getClienteNombre(z.clienteId) === filterCliente);
+                
+                return matchEstado && matchTienda && matchCliente;
             });
 
             if(zapatos.length === 0) { 
@@ -1873,7 +1946,12 @@
             }
             zapatos.sort((a, b) => new Date(b.fechaLlegada) - new Date(a.fechaLlegada));
 
-            const tituloDoc = `Inventario Físico ${!isTodasTienda ? '- ' + filterTienda : ''}`;
+            let subTitulo = [];
+            if (!isTodasTienda) subTitulo.push(`Tienda: ${filterTienda}`);
+            if (!isTodosCliente) subTitulo.push(`Cliente: ${filterCliente}`);
+            const tituloFinal = subTitulo.length > 0 ? `- ${subTitulo.join(' | ')}` : '';
+
+            const tituloDoc = `Inventario Físico ${tituloFinal}`;
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
@@ -1913,9 +1991,10 @@
                 
             html2pdf().set({ 
                 margin: 0.5, 
-                filename: `Inventario_${filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
-                html2canvas: { scale: 2 }, 
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
+                filename: `Inventario_${isTodasTienda?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
+                html2canvas: { scale: 2, windowWidth: 1024 }, 
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
         }
 
@@ -1932,7 +2011,8 @@
                 document.getElementById('a-cliente').value = ''; 
             }
             
-            document.getElementById('a-precio').value = ''; 
+            // Si tiene precio acordado guardado, lo precargamos en el campo de venta
+            document.getElementById('a-precio').value = z.precioAcordado ? z.precioAcordado : ''; 
             document.getElementById('modal-asignar').classList.remove('hidden');
         }
 
@@ -1984,7 +2064,10 @@
             if (zaps.length === 0) {
                 select.innerHTML = '<option value="">-- NO HAY DISPONIBLES EN BODEGA --</option>';
             } else {
-                select.innerHTML = '<option value="">-- SELECCIONA DE BODEGA --</option>' + zaps.map(z => `<option value="${z.id}">${z.modelo} - Talla ${z.talla} - ${z.color}</option>`).join('');
+                select.innerHTML = '<option value="">-- SELECCIONA DE BODEGA --</option>' + zaps.map(z => {
+                    const extra = z.precioAcordado ? ` ($${z.precioAcordado})` : '';
+                    return `<option value="${z.id}">${z.modelo} - Talla ${z.talla} - ${z.color}${extra}</option>`;
+                }).join('');
             }
             
             document.getElementById('vc-precio').value = ''; 
@@ -2015,6 +2098,19 @@
             
             setTimeout(() => { syncToGithub(); }, 100);
         }
+
+        // Listener para que al seleccionar zapato se autollene el precio si hay uno acordado
+        document.getElementById('vc-zapato').addEventListener('change', function(e) {
+            const zId = e.target.value;
+            if(zId) {
+                const z = dbZapatos.find(x => x.id === zId);
+                if(z && z.precioAcordado) {
+                    document.getElementById('vc-precio').value = z.precioAcordado;
+                } else {
+                    document.getElementById('vc-precio').value = '';
+                }
+            }
+        });
 
         function openAbonoModal(idC) {
             const c = dbClientes.find(x => x.id === idC); 
@@ -2336,13 +2432,13 @@
                 margin: 0.5, 
                 filename: `Corte_${nombreMes.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true }, 
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1024 }, 
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
         }
 
     </script>
 </body>
 </html>
-
 
