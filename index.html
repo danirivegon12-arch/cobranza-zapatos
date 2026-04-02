@@ -54,14 +54,23 @@
                     <p class="text-[9px] uppercase font-bold text-indigo-400 tracking-widest mt-1">Control General</p>
                 </div>
                 
-                <!-- BOTÓN CONFIGURACIÓN GITHUB CON INDICADOR OFFLINE -->
-                <button id="btn-nube" onclick="openGithubModal()" class="absolute right-0 md:-right-12 bg-slate-800 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors relative" title="Configurar Nube GitHub">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
-                    </svg>
-                    <!-- Puntito rojo para cambios pendientes sin internet -->
-                    <span id="indicador-sync" class="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full hidden border-2 border-slate-900"></span>
-                </button>
+                <!-- CONTENEDOR ESTADO RED Y GITHUB -->
+                <div class="absolute right-0 md:-right-24 flex items-center gap-2">
+                    <!-- INDICADOR ONLINE/OFFLINE -->
+                    <div id="status-conexion" class="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1.5 rounded-full uppercase flex items-center gap-1 shadow-sm border border-emerald-200 transition-colors" title="Estado de la conexión">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 indicator-dot"></span>
+                        <span class="indicator-text hidden sm:inline">Online</span>
+                    </div>
+
+                    <!-- BOTÓN CONFIGURACIÓN GITHUB CON INDICADOR PENDIENTES -->
+                    <button id="btn-nube" onclick="openGithubModal()" class="bg-slate-800 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors relative" title="Configurar Nube GitHub">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+                        </svg>
+                        <!-- Puntito rojo para cambios pendientes sin internet -->
+                        <span id="indicador-sync" class="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full hidden border-2 border-slate-900"></span>
+                    </button>
+                </div>
             </div>
             
             <div class="flex gap-2 bg-slate-800 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto custom-scrollbar">
@@ -561,6 +570,7 @@
 
         // ======= INICIALIZACION =======
         window.onload = () => {
+            updateOnlineStatus(); // Cargar indicador red
             document.getElementById('z-fecha').valueAsDate = new Date();
             document.getElementById('ab-fecha').valueAsDate = new Date();
             inicializarListaTallas(); 
@@ -594,12 +604,38 @@
             }, 1800000); 
         };
 
+        // NUEVA FUNCION ESTADO RED
+        function updateOnlineStatus() {
+            const statusDiv = document.getElementById('status-conexion');
+            if(!statusDiv) return;
+            const textSpan = statusDiv.querySelector('.indicator-text');
+            const dotSpan = statusDiv.querySelector('.indicator-dot');
+            
+            if (navigator.onLine) {
+                statusDiv.classList.replace('bg-rose-100', 'bg-emerald-100');
+                statusDiv.classList.replace('text-rose-700', 'text-emerald-700');
+                statusDiv.classList.replace('border-rose-200', 'border-emerald-200');
+                dotSpan.classList.replace('bg-rose-500', 'bg-emerald-500');
+                dotSpan.classList.remove('animate-pulse');
+                textSpan.innerText = 'Online';
+            } else {
+                statusDiv.classList.replace('bg-emerald-100', 'bg-rose-100');
+                statusDiv.classList.replace('text-emerald-700', 'text-rose-700');
+                statusDiv.classList.replace('border-emerald-200', 'border-rose-200');
+                dotSpan.classList.replace('bg-emerald-500', 'bg-rose-500');
+                dotSpan.classList.add('animate-pulse');
+                textSpan.innerText = 'Offline';
+            }
+        }
+
         // Escuchar cuando el celular recupera el WiFi o los Datos
         window.addEventListener('online', () => {
+            updateOnlineStatus();
             if(localStorage.getItem('pending_sync') === 'true') {
                 syncToGithub(); 
             }
         });
+        window.addEventListener('offline', updateOnlineStatus);
 
 
         // ======= GITHUB NUBE - MODO OFFLINE =======
@@ -1378,15 +1414,13 @@
                     </div>
                 </div>`;
 
-            const container = document.createElement('div');
-            container.innerHTML = htmlContent;
-
+            // Uso directo del string htmlContent para evitar fallos de página en blanco
             html2pdf().set({
                 margin: 0.4, 
                 filename: `EstadoCuenta_${cliente.nombre.replace(/\s+/g, '_')}.pdf`, 
                 html2canvas: { scale: 2 },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).from(container).save();
+            }).from(htmlContent).save();
         }
 
 
@@ -1521,16 +1555,14 @@
                         </tbody>
                     </table>
                 </div>`;
-            
-            const container = document.createElement('div');
-            container.innerHTML = htmlContent;
 
+            // Pasamos el string directo y cambiamos a orientación landscape para evitar cortes
             html2pdf().set({
                 margin: 0.5, 
                 filename: `Encargos_${filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`,
                 html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).from(container).save();
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' }
+            }).from(htmlContent).save();
         }
 
         // ================= BODEGA =================
@@ -1638,21 +1670,25 @@
             }
 
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
-            actualizarFiltrosBodega(); 
-            actualizarFiltrosPedidos(); 
             closeModal('modal-zapato');
             
-            if(!document.getElementById('view-pedidos').classList.contains('hidden')) {
-                renderPedidos();
-            }
-            if(!document.getElementById('view-bodega').classList.contains('hidden')) {
-                renderBodega();
-            }
-            if(!document.getElementById('view-clientes').classList.contains('hidden')) {
-                renderClientes();
-            }
-            
-            syncToGithub(); // SUBIR A NUBE
+            // Usamos un pequeño retraso para no bloquear la animación de cierre del modal
+            setTimeout(() => {
+                actualizarFiltrosBodega(); 
+                actualizarFiltrosPedidos(); 
+                
+                if(!document.getElementById('view-pedidos').classList.contains('hidden')) {
+                    renderPedidos();
+                }
+                if(!document.getElementById('view-bodega').classList.contains('hidden')) {
+                    renderBodega();
+                }
+                if(!document.getElementById('view-clientes').classList.contains('hidden')) {
+                    renderClientes();
+                }
+                
+                syncToGithub(); // SUBIR A NUBE
+            }, 50);
         }
 
         function borrarZapato(id, vista = 'bodega') {
@@ -1660,16 +1696,19 @@
                 dbZapatos = dbZapatos.filter(z => z.id !== id); 
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
                 
-                actualizarFiltrosBodega(); 
-                actualizarFiltrosPedidos();
-                
-                if(vista === 'pedidos') {
-                    renderPedidos(); 
-                } else {
-                    renderBodega();
-                }
-                
-                syncToGithub(); // SUBIR A NUBE
+                // Retraso para evitar que la UI se congele antes de desaparecer el cuadro de alerta
+                setTimeout(() => {
+                    actualizarFiltrosBodega(); 
+                    actualizarFiltrosPedidos();
+                    
+                    if(vista === 'pedidos') {
+                        renderPedidos(); 
+                    } else {
+                        renderBodega();
+                    }
+                    
+                    syncToGithub(); // SUBIR A NUBE
+                }, 50);
             }
         }
 
@@ -1877,15 +1916,13 @@
                     </table>
                 </div>`;
             
-            const container = document.createElement('div');
-            container.innerHTML = htmlContent;
-
+            // Pasamos el string directo (evita página en blanco) y cambiamos a orientación landscape
             html2pdf().set({
                 margin: 0.5, 
                 filename: `Inventario_${filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`,
                 html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).from(container).save();
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
+            }).from(htmlContent).save();
         }
 
         // ================= ASIGNAR Y ABONAR =================
@@ -2052,3 +2089,4 @@
     </script>
 </body>
 </html>
+
