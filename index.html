@@ -1395,7 +1395,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a;">
+                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a; width: 750px; max-width: 750px; box-sizing: border-box;">
                     <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
                         <h1 style="color: #1e293b; margin: 0; font-size: 26px; text-transform: uppercase; font-weight: 900;">Zapatos Mariana</h1>
                         <h2 style="color: #475569; margin: 5px 0; font-size: 16px; font-weight: 600;">Estado de Cuenta Detallado</h2>
@@ -1489,7 +1489,7 @@
                 margin: 0.5, 
                 filename: `EstadoCuenta_${cliente.nombre.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1024 }, 
+                html2canvas: { scale: 2, useCORS: true }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -1610,7 +1610,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1000px; max-width: 1000px; box-sizing: border-box;">
                     <h2 style="text-align: center; color: #1e3a8a; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
@@ -1643,7 +1643,7 @@
             html2pdf().set({ 
                 margin: 0.5, 
                 filename: `Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
-                html2canvas: { scale: 2, windowWidth: 1024 }, 
+                html2canvas: { scale: 2, useCORS: true }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -1955,7 +1955,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1000px; max-width: 1000px; box-sizing: border-box;">
                     <h2 style="text-align: center; color: #1e293b; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy} | Filtro: ${isTodosEstado ? 'Todos los Estados' : filterEstado}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
@@ -1992,7 +1992,7 @@
             html2pdf().set({ 
                 margin: 0.5, 
                 filename: `Inventario_${isTodasTienda?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
-                html2canvas: { scale: 2, windowWidth: 1024 }, 
+                html2canvas: { scale: 2, useCORS: true }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -2353,7 +2353,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 750px; max-width: 750px; box-sizing: border-box;">
                     <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
                         <h1 style="color: #6b21a8; font-size: 22px; text-transform: uppercase; margin: 0;">Zapatos Mariana</h1>
                         <h2 style="color: #1e293b; font-size: 16px; margin: 5px 0;">Corte de Caja - ${nombreMes}</h2>
@@ -2432,7 +2432,7 @@
                 margin: 0.5, 
                 filename: `Corte_${nombreMes.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1024 }, 
+                html2canvas: { scale: 2, useCORS: true }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -2441,4 +2441,5 @@
     </script>
 </body>
 </html>
+
 
