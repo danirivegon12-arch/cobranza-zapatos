@@ -16,9 +16,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap');
         
-        :root { 
-            color-scheme: light; 
-        }
+        :root { color-scheme: light; }
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
@@ -32,20 +30,10 @@
             color: #0f172a !important; 
         }
         
-        .custom-scrollbar::-webkit-scrollbar { 
-            width: 6px; 
-            height: 6px; 
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        .custom-scrollbar::-webkit-scrollbar-thumb { 
-            background: #cbd5e1; 
-            border-radius: 10px; 
-        }
-        
-        .alerta-critica { 
-            animation: pulse-red 2s infinite; 
-        }
-        
+        .alerta-critica { animation: pulse-red 2s infinite; }
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
             70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
@@ -55,8 +43,10 @@
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
-    <!-- Datalist global para clientes inteligentes -->
+    <!-- Datalists globales (ESTO ES LO QUE FALTABA Y CONGELABA TU APP) -->
     <datalist id="clientes-datalist"></datalist>
+    <datalist id="tiendas-existentes"></datalist>
+    <datalist id="colonias-existentes"></datalist>
 
     <!-- TOAST DE SINCRONIZACIÓN -->
     <div id="sync-toast" class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 z-[100]">
@@ -82,21 +72,16 @@
                     <p class="text-[9px] uppercase font-bold text-indigo-400 tracking-widest mt-1">Control General</p>
                 </div>
                 
-                <!-- CONTENEDOR ESTADO RED Y GITHUB -->
                 <div class="absolute right-0 md:-right-24 flex items-center gap-2">
-                    
-                    <!-- INDICADOR ONLINE/OFFLINE -->
                     <div id="status-conexion" class="bg-emerald-100 text-emerald-700 text-[9px] font-black px-2 py-1.5 rounded-full uppercase flex items-center gap-1 shadow-sm border border-emerald-200 transition-colors" title="Estado de la conexión">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 indicator-dot"></span>
                         <span class="indicator-text hidden sm:inline">Online</span>
                     </div>
 
-                    <!-- BOTÓN CONFIGURACIÓN GITHUB CON INDICADOR PENDIENTES -->
                     <button id="btn-nube" onclick="openGithubModal()" class="bg-slate-800 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors relative" title="Configurar Nube GitHub">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
                         </svg>
-                        <!-- Puntito rojo para cambios pendientes sin internet -->
                         <span id="indicador-sync" class="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full hidden border-2 border-slate-900"></span>
                     </button>
                 </div>
@@ -425,7 +410,6 @@
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Colonia / Zona</label>
                     <input type="text" id="c-colonia" list="colonias-existentes" required placeholder="Ej. Centro, Los Pinos..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
-                    <datalist id="colonias-existentes"></datalist>
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Dirección Detallada</label>
@@ -679,12 +663,9 @@
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
         }
 
-
         // ==========================================
         // ======= FUNCIÓN MAESTRA DE RENDERIZADO =======
         // ==========================================
-        // Esta función se encarga de actualizar TODA la app al mismo tiempo.
-        // Así evitamos tener que refrescar o cambiar de pestaña.
         function actualizarTodoYRenderizar() {
             try {
                 // 1. Actualizar Filtros y Listas desplegables
@@ -694,7 +675,7 @@
                 actualizarFiltrosPedidos();
                 generarSelectorMesesContaduria();
 
-                // 2. Recargar todas las vistas silenciosamente
+                // 2. Recargar todas las vistas silenciosamente (MUY RÁPIDO)
                 renderClientes();
                 renderPedidos();
                 renderBodega();
@@ -883,9 +864,7 @@
              if (!githubConfig.token || !githubConfig.repo) return;
              if (!navigator.onLine && !isAuto) { alert("No tienes internet para descargar la copia de seguridad."); return; }
              if (!navigator.onLine && isAuto) return;
-             
              if(!isAuto) mostrarNotificacionSync("Descargando Nube...");
-             
              try {
                  const getRes = await apiGithub('GET');
                  if (getRes.ok) {
@@ -1025,7 +1004,9 @@
             const selectFiltro = document.getElementById('filter-colonia');
             const colonias = [...new Set(dbClientes.map(c => c.colonia))].filter(Boolean).sort();
             
-            listData.innerHTML = colonias.map(z => `<option value="${z}">`).join('');
+            if(listData) {
+                listData.innerHTML = colonias.map(z => `<option value="${z}">`).join('');
+            }
             
             let val = selectFiltro.value || 'Todos'; 
             selectFiltro.innerHTML = '<option value="Todos">Todas las Colonias</option>' + 
@@ -1080,7 +1061,6 @@
 
             localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
             
-            // FIX: Cerrar ventana al instante
             closeModal('modal-cliente'); 
             actualizarTodoYRenderizar();
             setTimeout(() => { syncToGithub(); }, 100);
@@ -1106,7 +1086,6 @@
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
                 
-                // FIX: Cerrar ventana al instante
                 closeModal('modal-cliente'); 
                 actualizarTodoYRenderizar();
                 setTimeout(() => { syncToGithub(); }, 100);
@@ -1328,7 +1307,6 @@
 
             const abonos = cliente.abonos || [];
             const abonosContainer = document.getElementById('ec-lista-abonos');
-            
             if(abonos.length === 0) {
                 abonosContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">No hay abonos.</p>`;
             } else {
@@ -1386,6 +1364,7 @@
             }
         }
 
+        // ====== SOLUCION A PDFs RECORTADOS ======
         function generarPDFEstadoCuenta() {
             const idCliente = document.getElementById('modal-estado-cuenta').dataset.clienteId;
             const cliente = dbClientes.find(c => c.id === idCliente);
@@ -1441,13 +1420,14 @@
                         </thead>
                         <tbody>
                             ${zaps.map(z => `
-                            <tr style="page-break-inside: avoid;">
-                                <td style="padding: 8px; border: 1px solid #e2e8f0;">${z.tienda}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">${z.modelo}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; color: #e11d48; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #e11d48; font-weight: bold;">${money(z.precioVenta)}</td>
+                            <!-- Se quitó page-break-inside: avoid para evitar bug de html2pdf -->
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${z.tienda}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.modelo}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #e11d48; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; text-align: right; color: #e11d48; font-weight: bold;">${money(z.precioVenta)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>`;
@@ -1470,9 +1450,9 @@
                         </thead>
                         <tbody>
                             ${abonos.map(a => `
-                            <tr style="page-break-inside: avoid;">
-                                <td style="padding: 8px; border: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">${money(a.monto)}</td>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">${money(a.monto)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>`;
@@ -1487,9 +1467,10 @@
                 </div>`;
 
             html2pdf().set({ 
-                margin: 0.4, 
+                margin: 0.5, 
                 filename: `EstadoCuenta_${cliente.nombre.replace(/\s+/g, '_')}.pdf`, 
-                html2canvas: { scale: 2 }, 
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
             }).from(htmlContent).save();
         }
@@ -1597,12 +1578,12 @@
                         </thead>
                         <tbody>
                             ${pedidos.map(z => `
-                            <tr style="page-break-inside: avoid; border-bottom: 1px solid #e2e8f0;">
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0;">${z.modelo}</td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
-                                <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</td>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${z.modelo}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>
@@ -1622,7 +1603,9 @@
             const selectFiltro = document.getElementById('filter-tienda-bodega');
             const tiendas = [...new Set(dbZapatos.map(z => z.tienda))].filter(Boolean).sort();
             
-            listData.innerHTML = tiendas.map(t => `<option value="${t}">`).join('');
+            if(listData) {
+                listData.innerHTML = tiendas.map(t => `<option value="${t}">`).join('');
+            }
             
             let val = selectFiltro.value || 'Todas'; 
             selectFiltro.innerHTML = '<option value="Todas">Todas las Tiendas</option>' + 
@@ -1730,7 +1713,6 @@
 
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
             
-            // FIX: Cerrar ventana inmediatamente
             closeModal('modal-zapato'); 
             actualizarTodoYRenderizar();
             setTimeout(() => { syncToGithub(); }, 100);
@@ -1916,13 +1898,13 @@
                                 else if(z.estado === 'Bodega' && z.clienteId) estadoStr = `Apartado: ${getClienteNombre(z.clienteId)}`;
                                 
                                 return `
-                                <tr style="page-break-inside: avoid; border-bottom: 1px solid #e2e8f0;">
-                                    <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
-                                    <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
-                                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${z.modelo}</td>
-                                    <td style="padding: 8px; border: 1px solid #e2e8f0; color: #e11d48; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
-                                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${calcularDiasDesde(z.fechaLlegada)} d</td>
-                                    <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${estadoStr}</td>
+                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                    <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${z.modelo}</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #e11d48; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${calcularDiasDesde(z.fechaLlegada)} d</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${estadoStr}</td>
                                 </tr>`;
                             }).join('')}
                         </tbody>
@@ -1980,7 +1962,6 @@
             
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
             
-            // FIX: CERRAR INMEDIATO Y RECARGAR UI
             closeModal('modal-asignar'); 
             actualizarTodoYRenderizar();
 
@@ -2028,7 +2009,6 @@
             
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
             
-            // FIX: Cerrar inmediato y refrescar
             closeModal('modal-vender-cliente'); 
             actualizarTodoYRenderizar();
             openEstadoCuenta(idC);
@@ -2062,7 +2042,6 @@
             
             localStorage.setItem('db_clientes', JSON.stringify(dbClientes)); 
             
-            // FIX: CERRAR Y REFRESCAR INMEDIATAMENTE
             closeModal('modal-abono'); 
             actualizarTodoYRenderizar();
 
@@ -2072,7 +2051,6 @@
             
             setTimeout(() => { syncToGithub(); }, 100);
             
-            // WHATSAPP
             if(wa) {
                 let tel = c.telefono ? c.telefono.replace(/\D/g,'') : ''; 
                 if(tel.length === 10) tel = '52' + tel; 
@@ -2096,12 +2074,10 @@
 
         function getRangoSemanaActual() {
             const now = new Date();
-            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // 1(Lunes) a 7(Domingo)
+            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); 
             
-            const start = new Date(now);
-            start.setDate(now.getDate() - dayOfWeek + 1);
-            const end = new Date(now);
-            end.setDate(now.getDate() + (7 - dayOfWeek));
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - dayOfWeek));
             
             return { start: fmtLocal(start), end: fmtLocal(end) };
         }
@@ -2109,7 +2085,7 @@
         function obtenerMesesDisponibles() {
             const meses = new Set();
             const now = new Date();
-            meses.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`); // Mes actual siempre
+            meses.add(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`); 
             
             dbZapatos.forEach(z => {
                 if (z.estado === 'Asignado' && z.fechaAsignacion) {
@@ -2138,13 +2114,11 @@
             const selector = document.getElementById('select-mes-contaduria');
             if(!selector) return;
             
-            // FIX 3: Guardar el mes que el usuario está viendo actualmente
             const valorActual = selector.value; 
-            
             const meses = obtenerMesesDisponibles();
+            
             selector.innerHTML = meses.map(m => `<option value="${m}">${formatearMes(m)}</option>`).join('');
             
-            // RESTAURAR EL MES DESPUES DE GENERAR OPCIONES
             if (valorActual && meses.includes(valorActual)) {
                 selector.value = valorActual;
             } else if (meses.length > 0) {
@@ -2156,7 +2130,6 @@
             const mesSeleccionado = document.getElementById('select-mes-contaduria').value;
             if(!mesSeleccionado) return;
 
-            // 1. Deuda global y clientes con deuda
             let deudaGlobal = 0;
             let clientesConDeuda = 0;
             dbClientes.forEach(c => {
@@ -2167,7 +2140,6 @@
                 }
             });
 
-            // 2. Abonos de la semana actual (Siempre actual, no depende del mes)
             let abonosSemana = 0;
             const rangoSemana = getRangoSemanaActual();
             dbClientes.forEach(c => {
@@ -2180,7 +2152,6 @@
                 }
             });
 
-            // 3. Ventas y Abonos del mes seleccionado
             let totalAbonosMes = 0;
             let listaAbonosMes = [];
             dbClientes.forEach(c => {
@@ -2203,11 +2174,9 @@
                 }
             });
 
-            // Ordenar listas
             listaAbonosMes.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
             listaVentasMes.sort((a,b) => new Date(b.fechaAsignacion) - new Date(a.fechaAsignacion));
 
-            // Actualizar interfaz
             document.getElementById('cont-deuda-global').innerText = money(deudaGlobal);
             document.getElementById('cont-clientes-deuda').innerText = clientesConDeuda;
             
@@ -2220,7 +2189,6 @@
             document.getElementById('cont-badge-ventas').innerText = formatearMes(mesSeleccionado);
             document.getElementById('cont-badge-abonos').innerText = formatearMes(mesSeleccionado);
 
-            // Renderizar listas en HTML
             const contVentas = document.getElementById('cont-lista-ventas');
             if(listaVentasMes.length === 0) {
                 contVentas.innerHTML = `<p class="text-xs text-slate-400 text-center italic py-4">No hubo zapatos entregados en este mes.</p>`;
@@ -2322,10 +2290,10 @@
                         </thead>
                         <tbody>
                             ${listaAbonosMes.map(a => `
-                            <tr style="page-break-inside: avoid;">
-                                <td style="padding: 6px; border: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
-                                <td style="padding: 6px; border: 1px solid #e2e8f0; font-weight: bold;">${a.nombre}</td>
-                                <td style="padding: 6px; border: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">+ ${money(a.monto)}</td>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
+                                <td style="padding: 6px; border-right: 1px solid #e2e8f0; font-weight: bold;">${a.nombre}</td>
+                                <td style="padding: 6px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">+ ${money(a.monto)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>`;
@@ -2350,11 +2318,11 @@
                         </thead>
                         <tbody>
                             ${listaVentasMes.map(z => `
-                            <tr style="page-break-inside: avoid;">
-                                <td style="padding: 6px; border: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
-                                <td style="padding: 6px; border: 1px solid #e2e8f0;"><strong>${z.modelo}</strong> <span style="color:#64748b;">(${z.tienda})</span></td>
-                                <td style="padding: 6px; border: 1px solid #e2e8f0;">${getClienteNombre(z.clienteId)}</td>
-                                <td style="padding: 6px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${money(z.precioVenta)}</td>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
+                                <td style="padding: 6px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong> <span style="color:#64748b;">(${z.tienda})</span></td>
+                                <td style="padding: 6px; border-right: 1px solid #e2e8f0;">${getClienteNombre(z.clienteId)}</td>
+                                <td style="padding: 6px; border-right: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${money(z.precioVenta)}</td>
                             </tr>`).join('')}
                         </tbody>
                     </table>`;
@@ -2367,7 +2335,8 @@
             html2pdf().set({ 
                 margin: 0.5, 
                 filename: `Corte_${nombreMes.replace(/\s+/g, '_')}.pdf`, 
-                html2canvas: { scale: 2 }, 
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
             }).from(htmlContent).save();
         }
