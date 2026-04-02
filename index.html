@@ -1301,7 +1301,22 @@
                     totalGrupo += deuda; 
                     deudaGlobal += deuda;
                     
+                    // SEMÁFORO DE COBROS A PRUEBA DE MODO OSCURO
                     const pagoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end);
+                    
+                    let estadoCobroBadge = '';
+                    let borderCard = 'border-slate-200';
+
+                    if (deuda <= 0) {
+                        estadoCobroBadge = `<div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: #f1f5f9 !important; border-radius: 8px; border: 1px solid #cbd5e1 !important;"><span style="font-size: 14px;">✅</span><span style="color: #475569 !important; font-size: 10px; font-weight: 900;">SIN DEUDA PENDIENTE</span></div>`;
+                        borderCard = 'border-slate-200';
+                    } else if (pagoEstaSemana) {
+                        estadoCobroBadge = `<div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: #dcfce3 !important; border-radius: 8px; border: 1px solid #10b981 !important;"><span style="font-size: 14px;">💚</span><span style="color: #059669 !important; font-size: 10px; font-weight: 900;">ABONÓ ESTA SEMANA</span></div>`;
+                        borderCard = 'border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
+                    } else {
+                        estadoCobroBadge = `<div class="alerta-critica" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: #fee2e2 !important; border-radius: 8px; border: 1px solid #e11d48 !important;"><span style="font-size: 14px;">🔴</span><span style="color: #e11d48 !important; font-size: 10px; font-weight: 900;">FALTA COBRAR ESTA SEMANA</span></div>`;
+                        borderCard = 'border-rose-400 shadow-[0_0_10px_rgba(225,29,72,0.2)]';
+                    }
                     
                     const hasUp = i > 0 && search === '';
                     const hasDown = i < clientesEnGrupo.length - 1 && search === '';
@@ -1318,20 +1333,15 @@
                     }
 
                     return `
-                    <div class="bg-slate-50 border ${pagoEstaSemana ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-slate-200'} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow">
+                    <div class="bg-slate-50 border ${borderCard} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow">
                         <div class="flex gap-3 min-w-[200px]">
                             <div class="flex flex-col gap-1 w-7 justify-center flex-shrink-0">
-                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border ${pagoEstaSemana ? 'border-emerald-200' : 'border-slate-200'} hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
-                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border ${pagoEstaSemana ? 'border-emerald-200' : 'border-slate-200'} hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
+                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
+                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
                             </div>
-                            <div class="flex flex-col justify-center">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre} ${pagoEstaSemana ? '<span style="font-size: 1.1rem; filter: drop-shadow(0 0 2px rgba(16,185,129,0.8));" title="Ya pagó">✅</span>' : ''}</p>
-                                </div>
-                                ${pagoEstaSemana ? `<div style="display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; padding: 3px 8px; background-color: #10b981 !important; border-radius: 10px; width: fit-content; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); border: 1px solid #059669;">
-                                    <span style="display: block; width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%; box-shadow: 0 0 5px #fff;" class="animate-pulse"></span>
-                                    <span style="color: #ffffff !important; font-size: 10px; font-weight: 900; letter-spacing: 1px;">ABONÓ ESTA SEMANA</span>
-                                </div>` : ''}
+                            <div class="flex flex-col justify-center items-start gap-1">
+                                <p class="font-black text-lg uppercase leading-tight" style="color: #1e293b !important;">${c.nombre}</p>
+                                ${estadoCobroBadge}
                                 <div class="mt-1 space-y-0.5">
                                     <p class="text-[10px] font-bold text-slate-500">📞 ${c.telefono || 'S/N'}</p>
                                     <p class="text-[10px] font-bold text-slate-500">📍 ${c.colonia} • ${c.direccion ? c.direccion : 'Sin calle'}</p>
@@ -2301,8 +2311,18 @@
         }
 
         // ========================================================
-        // ================= CONTADURÍA =================
+        // ================= CONTADURÍA (CORREGIDA) =================
         // ========================================================
+
+        function getRangoSemanaActual() {
+            const now = new Date();
+            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); 
+            
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - dayOfWeek));
+            
+            return { start: fmtLocal(start), end: fmtLocal(end) };
+        }
 
         function obtenerMesesDisponibles() {
             const meses = new Set();
