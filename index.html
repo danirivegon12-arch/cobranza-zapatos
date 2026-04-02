@@ -359,12 +359,12 @@
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
                 <h2 class="text-xl font-black flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
-                    Nube GitHub
+                    Nube GitHub (Smart Sync)
                 </h2>
                 <button type="button" onclick="closeModal('modal-github')" class="text-slate-400 hover:text-white font-bold text-2xl leading-none cursor-pointer">&times;</button>
             </div>
             <div class="p-6 space-y-4">
-                <p class="text-xs text-slate-500 font-bold">Conecta tu cuenta de GitHub para respaldar todo automáticamente.</p>
+                <p class="text-xs text-slate-500 font-bold">Conecta tu cuenta de GitHub para respaldar todo automáticamente. Ahora con fusión inteligente anti-borrado.</p>
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Personal Access Token</label>
                     <input type="password" id="gh-token" placeholder="ghp_..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
@@ -379,15 +379,15 @@
                 </div>
                 <div class="pt-4 flex flex-col gap-3">
                     <button onclick="saveGithubConfig()" class="w-full py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Guardar y Conectar</button>
-                    <!-- BOTÓN FORZAR SUBIDA -->
+                    <!-- BOTÓN FORZAR SUBIDA / FUSION -->
                     <button onclick="syncToGithub()" class="w-full py-3 bg-blue-100 text-blue-700 font-black rounded-xl uppercase text-xs hover:bg-blue-200 transition-colors border border-blue-200 flex justify-center items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        Forzar Subida (Respaldar)
+                        Fusionar y Subir a Nube
                     </button>
-                    <!-- BOTÓN FORZAR DESCARGA -->
+                    <!-- BOTÓN FORZAR DESCARGA / FUSION -->
                     <button onclick="syncFromGithub(false)" class="w-full py-3 bg-emerald-100 text-emerald-700 font-black rounded-xl uppercase text-xs hover:bg-emerald-200 transition-colors border border-emerald-200 flex justify-center items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Bajar de Nube (Restaurar)
+                        Bajar y Fusionar Datos
                     </button>
                 </div>
             </div>
@@ -773,7 +773,7 @@
         window.addEventListener('offline', updateOnlineStatus);
 
 
-        // ======= GITHUB NUBE =======
+        // ================= GITHUB NUBE (SMART SYNC / FUSIÓN) =================
         function openGithubModal() {
             document.getElementById('gh-token').value = githubConfig.token || '';
             document.getElementById('gh-user').value = githubConfig.user || '';
@@ -849,6 +849,86 @@
             return await fetch(url, config);
         }
 
+        // --- ALGORITMO DE FUSIÓN (SMART MERGE) ---
+        function fusionarDatos(localData, remoteData) {
+            if (!remoteData || (!remoteData.clientes && !remoteData.zapatos)) return localData;
+
+            // 1. Fusionar Clientes y sus Abonos
+            let clientesMap = new Map();
+            
+            // Cargar los remotos al mapa
+            if (remoteData.clientes) {
+                remoteData.clientes.forEach(c => clientesMap.set(c.id, c));
+            }
+            
+            // Integrar los locales de forma inteligente
+            if (localData.clientes) {
+                localData.clientes.forEach(cLocal => {
+                    if (clientesMap.has(cLocal.id)) {
+                        let cRemote = clientesMap.get(cLocal.id);
+                        
+                        // Fusión de abonos: No perder ni los locales ni los remotos
+                        let abonosMap = new Map();
+                        if (cRemote.abonos) cRemote.abonos.forEach(a => abonosMap.set(a.id, a));
+                        if (cLocal.abonos) {
+                            cLocal.abonos.forEach(a => {
+                                // Si el abono local no existe en la nube, lo agregamos
+                                if (!abonosMap.has(a.id)) abonosMap.set(a.id, a);
+                            });
+                        }
+                        // Volver a convertirlos en lista y ordenarlos por fecha
+                        cRemote.abonos = Array.from(abonosMap.values()).sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+                        
+                        // Si local tiene datos de contacto más llenos que remoto, conservamos los locales
+                        if (!cRemote.direccion && cLocal.direccion) cRemote.direccion = cLocal.direccion;
+                        if (!cRemote.telefono && cLocal.telefono) cRemote.telefono = cLocal.telefono;
+                        
+                        clientesMap.set(cLocal.id, cRemote);
+                    } else {
+                        // El cliente fue creado localmente y no existe en remoto
+                        clientesMap.set(cLocal.id, cLocal);
+                    }
+                });
+            }
+
+            // 2. Fusionar Zapatos
+            let zapatosMap = new Map();
+            
+            if (remoteData.zapatos) {
+                remoteData.zapatos.forEach(z => zapatosMap.set(z.id, z));
+            }
+            
+            if (localData.zapatos) {
+                localData.zapatos.forEach(zLocal => {
+                    if (zapatosMap.has(zLocal.id)) {
+                        let zRemote = zapatosMap.get(zLocal.id);
+                        
+                        // Lógica de avance: Si localmente el zapato avanzó de estado (ej: de Bodega a Asignado),
+                        // y el remoto sigue atrasado, priorizamos el local.
+                        const estadosAvanzados = ['Asignado', 'Devolución', 'Devuelto a Tienda'];
+                        if (estadosAvanzados.includes(zLocal.estado) && !estadosAvanzados.includes(zRemote.estado)) {
+                            zapatosMap.set(zLocal.id, zLocal);
+                        } else if (zLocal.estado === 'Bodega' && zRemote.estado === 'Pedido') {
+                            zapatosMap.set(zLocal.id, zLocal);
+                        }
+                        // Si tienen el mismo estado, confiamos en remoto, a menos que local tenga un precio o fecha reciente asignada
+                        else if (zLocal.estado === 'Asignado' && zRemote.estado === 'Asignado') {
+                            if (!zRemote.fechaAsignacion && zLocal.fechaAsignacion) zapatosMap.set(zLocal.id, zLocal);
+                        }
+
+                    } else {
+                        // Zapato nuevo creado localmente
+                        zapatosMap.set(zLocal.id, zLocal);
+                    }
+                });
+            }
+
+            return {
+                clientes: Array.from(clientesMap.values()),
+                zapatos: Array.from(zapatosMap.values())
+            };
+        }
+
         async function syncToGithub() {
             if (!githubConfig.token || !githubConfig.repo) return;
             if (!navigator.onLine) {
@@ -857,26 +937,45 @@
                 setTimeout(ocultarNotificacionSync, 3500);
                 return;
             }
-            mostrarNotificacionSync("Respaldando en Nube...");
+            mostrarNotificacionSync("Fusionando y respaldando...");
             try {
                 let sha = "";
+                let remoteData = null;
+                
+                // 1. Descargar remoto para fusionar primero
                 const getRes = await apiGithub('GET');
                 if (getRes.ok) {
                     const getData = await getRes.json();
                     sha = getData.sha;
+                    const contentStr = b64_to_utf8(getData.content);
+                    remoteData = JSON.parse(contentStr);
                 }
-                const backupData = { clientes: dbClientes, zapatos: dbZapatos };
-                const contentBase64 = utf8_to_b64(JSON.stringify(backupData));
+                
+                const localData = { clientes: dbClientes, zapatos: dbZapatos };
+                
+                // 2. Aplicar el Smart Merge (Fusión inteligente)
+                const mergedData = fusionarDatos(localData, remoteData);
+                
+                // 3. Actualizar la vista local para que el usuario vea los datos de su pareja inmediatamente
+                dbClientes = mergedData.clientes;
+                dbZapatos = mergedData.zapatos;
+                localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+                localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                actualizarTodoYRenderizar();
+
+                // 4. Subir la versión combinada perfecta
+                const contentBase64 = utf8_to_b64(JSON.stringify(mergedData));
                 const putRes = await apiGithub('PUT', {
-                    message: `Auto-Respaldo App Zapatos: ${new Date().toLocaleString()}`,
+                    message: `Fusión Automática SmartSync: ${new Date().toLocaleString()}`,
                     content: contentBase64,
                     sha: sha || undefined
                 });
+                
                 if (putRes.ok) {
                     marcarSyncPendiente(false); 
                     document.getElementById('sync-toast-icon').innerText = '✅';
                     document.getElementById('sync-toast-icon').classList.remove('animate-pulse');
-                    document.getElementById('sync-toast-text').innerText = 'Respaldo Exitoso';
+                    document.getElementById('sync-toast-text').innerText = 'Fusión Exitosa';
                     setTimeout(ocultarNotificacionSync, 2000);
                 } else {
                     marcarSyncPendiente(true); 
@@ -895,7 +994,7 @@
              if (!githubConfig.token || !githubConfig.repo) return;
              if (!navigator.onLine && !isAuto) { alert("No tienes internet para descargar la copia de seguridad."); return; }
              if (!navigator.onLine && isAuto) return;
-             if(!isAuto) mostrarNotificacionSync("Descargando Nube...");
+             if(!isAuto) mostrarNotificacionSync("Descargando y Fusionando...");
              try {
                  const getRes = await apiGithub('GET');
                  if (getRes.ok) {
@@ -904,8 +1003,12 @@
                      const backupData = JSON.parse(contentStr);
 
                      if (backupData.clientes && backupData.zapatos) {
-                         dbClientes = backupData.clientes;
-                         dbZapatos = backupData.zapatos;
+                         const localData = { clientes: dbClientes, zapatos: dbZapatos };
+                         // Ahora Bajar Nube también usa Smart Merge para que no borres tus datos locales sin subir
+                         const mergedData = fusionarDatos(localData, backupData);
+
+                         dbClientes = mergedData.clientes;
+                         dbZapatos = mergedData.zapatos;
                          localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                          localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
 
@@ -2195,7 +2298,7 @@
         }
 
         // ========================================================
-        // ================= CONTADURÍA (CORREGIDA) =================
+        // ================= CONTADURÍA =================
         // ========================================================
 
         function obtenerMesesDisponibles() {
@@ -2541,4 +2644,5 @@
     </script>
 </body>
 </html>
+
 
