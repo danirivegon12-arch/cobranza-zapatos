@@ -1318,16 +1318,23 @@
                     }
 
                     return `
-                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative shadow-sm hover:shadow-md transition-shadow">
+                    <div class="bg-slate-50 border ${pagoEstaSemana ? 'border-emerald-400 bg-emerald-50/40 shadow-emerald-100/50' : 'border-slate-200'} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative shadow-sm hover:shadow-md transition-shadow">
                         <div class="flex gap-3 min-w-[200px]">
                             <div class="flex flex-col gap-1 w-7 justify-center flex-shrink-0">
-                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
-                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
+                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border ${pagoEstaSemana ? 'border-emerald-200' : 'border-slate-200'} hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
+                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border ${pagoEstaSemana ? 'border-emerald-200' : 'border-slate-200'} hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
                             </div>
                             <div class="flex flex-col justify-center">
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre}</p>
-                                    ${pagoEstaSemana ? `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase flex items-center gap-1 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Pagó</span>` : ''}
+                                    ${pagoEstaSemana ? `
+                                    <div class="flex items-center gap-1.5 bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-md shadow-sm" title="Ya dio abono esta semana">
+                                        <span class="relative flex h-2.5 w-2.5">
+                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                                        </span>
+                                        <span class="text-[10px] font-black text-emerald-800 uppercase tracking-wider">Abonó</span>
+                                    </div>` : ''}
                                 </div>
                                 <div class="mt-1 space-y-0.5">
                                     <p class="text-[10px] font-bold text-slate-500">📞 ${c.telefono || 'S/N'}</p>
