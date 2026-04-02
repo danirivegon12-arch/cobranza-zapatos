@@ -271,12 +271,23 @@
                 <h2 class="text-2xl font-black text-slate-800 leading-none">Cortes de Caja</h2>
             </div>
             
-            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <select id="select-mes-contaduria" onchange="renderContaduria()" class="bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 outline-none font-bold text-sm text-purple-900 cursor-pointer shadow-sm"></select>
-                <button onclick="generarPDFContaduria()" class="bg-purple-700 hover:bg-purple-600 text-white px-6 py-4 sm:py-0 rounded-2xl font-black text-xs shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
-                    Exportar Balance
-                </button>
+            <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center justify-end flex-wrap">
+                <!-- Grupo PDF Diario -->
+                <div class="flex w-full sm:w-auto gap-2">
+                    <input type="date" id="fecha-corte-dia" class="flex-1 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-indigo-900 cursor-pointer shadow-sm">
+                    <button onclick="generarPDFCorteDia()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl font-black text-[10px] shadow-md uppercase tracking-wider flex justify-center items-center gap-2 transition-colors whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+                        Corte Diario
+                    </button>
+                </div>
+                <!-- Grupo PDF Mensual -->
+                <div class="flex w-full sm:w-auto gap-2">
+                    <select id="select-mes-contaduria" onchange="renderContaduria()" class="flex-1 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-purple-900 cursor-pointer shadow-sm"></select>
+                    <button onclick="generarPDFContaduria()" class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-3 rounded-xl font-black text-[10px] shadow-md uppercase tracking-wider flex justify-center items-center gap-2 transition-colors whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+                        Balance Mes
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -710,6 +721,7 @@
             updateOnlineStatus(); 
             document.getElementById('z-fecha').valueAsDate = new Date();
             document.getElementById('ab-fecha').valueAsDate = new Date();
+            document.getElementById('fecha-corte-dia').valueAsDate = new Date();
             inicializarListaTallas(); 
             
             actualizarTodoYRenderizar(); 
@@ -985,6 +997,16 @@
             return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
 
+        function getRangoSemanaActual() {
+            const now = new Date();
+            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); 
+            
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
+            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - dayOfWeek));
+            
+            return { start: fmtLocal(start), end: fmtLocal(end) };
+        }
+
         function calcularDiasDesde(fechaLimite) {
             if(!fechaLimite) return 0;
             const fecha = new Date(fechaLimite);
@@ -1145,6 +1167,8 @@
 
             const isTodosDia = !filterDia || filterDia === 'Todos';
             const isTodosColonia = !filterColonia || filterColonia === 'Todos';
+            
+            const rangoSemana = getRangoSemanaActual();
 
             let filtered = dbClientes.filter(c => {
                 const matchSearch = `${c.nombre} ${c.direccion} ${c.telefono}`.toLowerCase().includes(search);
@@ -1174,6 +1198,8 @@
                     totalGrupo += deuda; 
                     deudaGlobal += deuda;
                     
+                    const pagoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end);
+                    
                     const hasUp = i > 0 && search === '';
                     const hasDown = i < clientesEnGrupo.length - 1 && search === '';
                     
@@ -1196,7 +1222,10 @@
                                 <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
                             </div>
                             <div class="flex flex-col justify-center">
-                                <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre}</p>
+                                    ${pagoEstaSemana ? `<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[9px] px-1.5 py-0.5 rounded-md font-black uppercase flex items-center gap-1 shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Pagó</span>` : ''}
+                                </div>
                                 <div class="mt-1 space-y-0.5">
                                     <p class="text-[10px] font-bold text-slate-500">📞 ${c.telefono || 'S/N'}</p>
                                     <p class="text-[10px] font-bold text-slate-500">📍 ${c.colonia} • ${c.direccion ? c.direccion : 'Sin calle'}</p>
@@ -2169,16 +2198,6 @@
         // ================= CONTADURÍA (CORREGIDA) =================
         // ========================================================
 
-        function getRangoSemanaActual() {
-            const now = new Date();
-            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); 
-            
-            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
-            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - dayOfWeek));
-            
-            return { start: fmtLocal(start), end: fmtLocal(end) };
-        }
-
         function obtenerMesesDisponibles() {
             const meses = new Set();
             const now = new Date();
@@ -2321,6 +2340,86 @@
             }
         }
 
+        // ================= PDF CORTE DIARIO =================
+        function generarPDFCorteDia() {
+            const fechaInput = document.getElementById('fecha-corte-dia').value;
+            if(!fechaInput) return;
+            
+            const fechaObj = new Date(fechaInput + 'T00:00:00'); // Evitar desfase de zona horaria
+            const fechaHoyUI = fechaObj.toLocaleDateString('es-MX');
+
+            let totalAbonosDia = 0;
+            let listaAbonosDia = [];
+
+            dbClientes.forEach(c => {
+                if(c.abonos) {
+                    c.abonos.forEach(a => {
+                        if(a.fecha === fechaInput) {
+                            totalAbonosDia += Number(a.monto);
+                            listaAbonosDia.push({ nombre: c.nombre, monto: Number(a.monto), colonia: c.colonia || 'S/C' });
+                        }
+                    });
+                }
+            });
+
+            if(listaAbonosDia.length === 0) {
+                alert(`No hay abonos registrados en la fecha: ${fechaHoyUI}`);
+                return;
+            }
+
+            // Ordenar alfabéticamente por cliente
+            listaAbonosDia.sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+            let htmlContent = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; min-width: 800px; max-width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                    <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
+                        <h1 style="color: #4f46e5; font-size: 22px; text-transform: uppercase; margin: 0; font-weight: 900;">Zapatos Mariana</h1>
+                        <h2 style="color: #1e293b; font-size: 16px; margin: 5px 0; font-weight: bold;">Corte Diario de Abonos</h2>
+                        <p style="color: #64748b; font-size: 11px; margin: 0;">Fecha de Cobro: <strong>${fechaHoyUI}</strong></p>
+                    </div>
+
+                    <div style="background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center;">
+                        <p style="margin: 0; font-size: 12px; color: #4338ca; text-transform: uppercase; font-weight: bold;">Total Recaudado en el Día</p>
+                        <p style="margin: 5px 0 0 0; font-size: 28px; color: #312e81; font-weight: bold;">${money(totalAbonosDia)}</p>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #4f46e5; font-weight: bold;">(${listaAbonosDia.length} abonos recibidos)</p>
+                    </div>
+
+                    <h3 style="color: #334155; font-size: 14px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 10px; font-weight: bold;">Detalle de Abonos por Cliente</h3>
+
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid !important; break-inside: avoid !important;">
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Cliente</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0;">Zona / Colonia</th>
+                                <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Monto Recibido</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${listaAbonosDia.map(a => `
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
+                                <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold; text-transform: uppercase;">${a.nombre}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${a.colonia}</td>
+                                <td style="padding: 8px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">+ ${money(a.monto)}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <div style="margin-top: 50px; text-align: center; color: #94a3b8; font-size: 10px; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+                        <p>Resumen generado para cuadrar cuentas del día.</p>
+                    </div>
+                </div>`;
+
+            html2pdf().set({ 
+                margin: 0.5, 
+                filename: `Corte_Diario_${fechaInput}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: 'css', avoid: 'tr' }
+            }).from(htmlContent).save();
+        }
+
+        // ================= PDF CORTE MENSUAL =================
         function generarPDFContaduria() {
             const mesSeleccionado = document.getElementById('select-mes-contaduria').value;
             if(!mesSeleccionado) return;
@@ -2442,5 +2541,4 @@
     </script>
 </body>
 </html>
-
 
