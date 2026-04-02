@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light only">
+    <title>Zapatos Mariana - Cobranza e Inventario</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTML2PDF para exportar reportes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap');
+        :root { color-scheme: light; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        
+        select, option { background-color: #ffffff !important; color: #0f172a !important; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .alerta-critica { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen">
+
+    <!-- TOAST DE SINCRONIZACIÓN -->
+    <div id="sync-toast" class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 z-[100]">
+        <span id="sync-toast-icon" class="text-lg">☁️</span>
+        <span id="sync-toast-text">Sincronizando...</span>
+    </div>
+
+    <!-- BARRA NAVEGACION -->
+    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-40 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4 w-full md:w-auto justify-center md:justify-start relative">
+                <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="text-center md:text-left">
+                    <h1 class="text-2xl font-black tracking-tight leading-none uppercase text-indigo-100">ZAPATOS MARIANA</h1>
+                    <p class="text-[9px] uppercase font-bold text-indigo-400 tracking-widest mt-1">Control General</p>
+                </div>
+                <!-- BOTÓN CONFIGURACIÓN GITHUB CON INDICADOR OFFLINE -->
+                <button id="btn-nube" onclick="openGithubModal()" class="absolute right-0 md:-right-12 bg-slate-800 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors relative" title="Configurar Nube GitHub">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                    <!-- Puntito rojo para cambios pendientes -->
+                    <span id="indicador-sync" class="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full hidden border-2 border-slate-900"></span>
+                </button>
+            </div>
+            
+            <div class="flex gap-2 bg-slate-800 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto custom-scrollbar">
+                <button onclick="switchMainView('clientes')" id="nav-clientes" class="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all bg-indigo-600 text-white shadow-md flex justify-center items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Cartera y Rutas
+                </button>
+                <button onclick="switchMainView('pedidos')" id="nav-pedidos" class="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white flex justify-center items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                    Encargos (Pedidos)
+                </button>
+                <button onclick="switchMainView('bodega')" id="nav-bodega" class="flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white flex justify-center items-center gap-2 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
+                    Bodega Física
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ================= VISTA CLIENTES (PRINCIPAL) ================= -->
+    <main id="view-clientes" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6">
+        
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="w-full md:w-auto">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cartera Activa</p>
+                <h2 class="text-2xl font-black text-slate-800 leading-none">Cuentas por Cobrar</h2>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div class="bg-emerald-50 px-5 py-3 rounded-2xl border border-emerald-100 flex items-center justify-between gap-6">
+                    <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Deuda Total Global</p>
+                    <p class="text-2xl font-black text-emerald-700" id="stat-deuda-global">$0</p>
+                </div>
+                <button onclick="openClienteModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-4 sm:py-0 rounded-2xl font-black text-xs shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                    Nuevo Cliente
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-3">
+            <div class="relative flex-grow">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="search-clientes" oninput="renderClientes()" placeholder="Buscar por nombre, dirección o teléfono..." class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500">
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-3">
+                <select id="filter-dia" onchange="renderClientes()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer">
+                    <option value="Todos">Todos los Días</option>
+                    <option value="Lunes">Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miercoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                    <option value="Sabado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                    <option value="Otro">Otro / Quincenal</option>
+                </select>
+
+                <select id="filter-colonia" onchange="renderClientes()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer"></select>
+
+                <select id="agrupar-por" onchange="renderClientes()" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-xs text-white uppercase cursor-pointer hidden sm:block">
+                    <option value="diaCobro">Agrupar por Día</option>
+                    <option value="colonia">Agrupar por Colonia</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="lista-clientes" class="space-y-6"></div>
+    </main>
+
+    <!-- ================= VISTA PEDIDOS (ENCARGOS) ================= -->
+    <main id="view-pedidos" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6 hidden">
+        
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="w-full md:w-auto">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lista de Pre-llegada</p>
+                <h2 class="text-2xl font-black text-slate-800 leading-none">Encargos por Surtir</h2>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <button onclick="openZapatoModal('nuevo', 'Pedido')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-4 sm:py-0 rounded-2xl font-black text-xs shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+                    Registrar Encargo
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-sm font-bold text-blue-900 text-center sm:text-left">
+                Estos son los zapatos que los clientes te han pedido pero que <span class="font-black">aún no vas a comprar a la tienda</span>.
+            </p>
+            <div class="text-center sm:text-right bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-50">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total de Encargos</p>
+                <p class="text-xl font-black text-blue-600" id="stat-total-pedidos">0</p>
+            </div>
+        </div>
+
+        <!-- FILTROS Y PDF DE PEDIDOS -->
+        <div class="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <select id="filter-tienda-pedidos" onchange="renderPedidos()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full flex-grow"></select>
+            
+            <button onclick="generarPDFPedidos()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-3 rounded-xl font-black text-[10px] shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors flex-shrink-0" title="Exportar lista de pedidos según la tienda seleccionada">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+                PDF Pedidos
+            </button>
+        </div>
+
+        <div id="lista-pedidos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+    </main>
+
+    <!-- ================= VISTA BODEGA ================= -->
+    <main id="view-bodega" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6 hidden">
+        
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div onclick="setFiltroBodega('Bodega')" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:ring-2 hover:ring-indigo-300 transition-all group">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-indigo-500">Físico en Casa</p>
+                <p class="text-2xl font-black text-slate-800" id="stat-bodega">0</p>
+            </div>
+            <div onclick="setFiltroBodega('Asignado')" class="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-emerald-400 transition-all group">
+                <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1 group-hover:text-emerald-800">Pares Vendidos</p>
+                <p class="text-2xl font-black text-emerald-700" id="stat-asignados">0</p>
+            </div>
+            <div onclick="setFiltroBodega('Devolución')" class="bg-amber-50 p-4 rounded-2xl border border-amber-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-amber-400 transition-all group">
+                <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1 group-hover:text-amber-800">Para Devolver (Tienda)</p>
+                <p class="text-2xl font-black text-amber-700" id="stat-devolucion">0</p>
+            </div>
+            <div onclick="setFiltroBodega('Riesgo')" class="bg-rose-50 p-4 rounded-2xl border border-rose-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-rose-400 transition-all group">
+                <p class="text-[9px] font-black text-rose-600 uppercase tracking-widest mb-1 group-hover:text-rose-800">Riesgo Catálogo (>30d)</p>
+                <p class="text-2xl font-black text-rose-700" id="stat-vencidos" title="Total de zapatos (en bodega o cliente) que ya no pueden volver a tienda por exceder 30 días.">0</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col flex-wrap lg:flex-row gap-3">
+            <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-grow gap-2 flex-wrap sm:flex-nowrap">
+                <div class="relative flex-grow w-full sm:w-auto">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="search-bodega" oninput="renderBodega()" placeholder="Buscar ID, Marca, Color, Tienda, Cliente o Talla..." class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <select id="filter-tienda-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto"></select>
+                <select id="filter-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto">
+                    <option value="Todos">Todos los Estados</option>
+                    <option value="Bodega">Solo Bodega</option>
+                    <option value="Devolución">En Devolución</option>
+                    <option value="Asignado">Ya Asignados (Vendidos)</option>
+                    <option value="Riesgo">Riesgo (>30 días)</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="generarPDFBodega()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-4 sm:py-0 rounded-2xl font-black text-[10px] shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors" title="Exportar PDF (según filtros aplicados)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+                    PDF
+                </button>
+                <button onclick="openZapatoModal('nuevo', 'Bodega')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-4 sm:py-0 rounded-2xl font-black text-[10px] sm:text-xs shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Ingresar Directo
+                </button>
+            </div>
+        </div>
+
+        <div id="lista-bodega" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+    </main>
+
+
+    <!-- ================= MODALES GLOBALES ================= -->
+
+    <!-- Modal Configuración GitHub -->
+    <div id="modal-github" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
+                <h2 class="text-xl font-black flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                    Nube GitHub
+                </h2>
+                <button type="button" onclick="closeModal('modal-github')" class="text-slate-400 hover:text-white font-bold text-2xl leading-none cursor-pointer">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-500 font-bold">Conecta tu cuenta de GitHub para respaldar todo automáticamente.</p>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Personal Access Token</label>
+                    <input type="password" id="gh-token" placeholder="ghp_..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Usuario de GitHub</label>
+                    <input type="text" id="gh-user" placeholder="Ej. DanMariana" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Nombre del Repositorio</label>
+                    <input type="text" id="gh-repo" placeholder="Ej. app-zapatos" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                </div>
+                <div class="pt-4 flex flex-col gap-3">
+                    <button onclick="saveGithubConfig()" class="w-full py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Guardar y Conectar</button>
+                    <!-- BOTÓN FORZAR SUBIDA (útil si cobraste offline y llegas a casa con WiFi) -->
+                    <button onclick="syncToGithub()" class="w-full py-3 bg-blue-100 text-blue-700 font-black rounded-xl uppercase text-xs hover:bg-blue-200 transition-colors border border-blue-200 flex justify-center items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Forzar Subida (Respaldar)
+                    </button>
+                    <button onclick="syncFromGithub(false)" class="w-full py-3 bg-emerald-100 text-emerald-700 font-black rounded-xl uppercase text-xs hover:bg-emerald-200 transition-colors border border-emerald-200 flex justify-center items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Bajar de Nube (Restaurar)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Registro/Edición Cliente -->
+    <div id="modal-cliente" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 class="text-xl font-black text-slate-800" id="titulo-cliente">Nuevo Cliente</h2>
+                <button type="button" onclick="closeModal('modal-cliente')" class="text-slate-400 hover:text-slate-600 font-bold text-2xl leading-none cursor-pointer">&times;</button>
+            </div>
+            <form id="form-cliente" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar" onsubmit="saveCliente(event)">
+                <input type="hidden" id="c-id">
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Nombre Completo del Cliente</label>
+                    <input type="text" id="c-nombre" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Celular / WhatsApp</label>
+                        <input type="tel" id="c-tel" placeholder="+52 5512345678" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Día de Cobro</label>
+                        <select id="c-dia" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miercoles">Miércoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                            <option value="Sabado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                            <option value="Otro">Quincenal / Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Colonia / Zona</label>
+                    <input type="text" id="c-colonia" list="colonias-existentes" required placeholder="Ej. Centro, Los Pinos..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <datalist id="colonias-existentes"></datalist>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Dirección Detallada</label>
+                    <textarea id="c-direccion" placeholder="Calle, número, referencias..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none min-h-[80px]"></textarea>
+                </div>
+                <div class="pt-4 flex gap-2">
+                    <button type="button" id="btn-borrar-cliente" onclick="borrarCliente()" class="hidden py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-black rounded-xl transition-colors shadow-sm" title="Eliminar Cliente Definitivamente">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                    <button type="button" onclick="closeModal('modal-cliente')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs cursor-pointer hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-[2] py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Guardar Datos</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Registro Zapato / Pedido (z-50) -->
+    <div id="modal-zapato" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 class="text-xl font-black text-slate-800" id="titulo-zapato">Ingresar Zapato / Pedido</h2>
+                <button type="button" onclick="closeModal('modal-zapato')" class="text-slate-400 hover:text-rose-600 font-bold text-2xl leading-none cursor-pointer">&times;</button>
+            </div>
+            <form id="form-zapato" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar" onsubmit="saveZapato(event)">
+                <input type="hidden" id="zapato-id">
+                
+                <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+                    <label class="text-[10px] font-black text-indigo-700 uppercase ml-2">Estado del Registro</label>
+                    <select id="z-estado" onchange="toggleFechaModal()" class="w-full mt-1 p-3 bg-white border border-slate-200 rounded-xl font-black text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="Pedido">📦 Pedido / Encargo (Aún no se surte)</option>
+                        <option value="Bodega">🏠 Ya está en Bodega (Físico en casa)</option>
+                        <option value="Devolución">⚠️ En Devolución (Para tienda)</option>
+                        <option value="Devuelto a Tienda">❌ Devuelto a Tienda (Baja)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">¿Es para algún cliente? (Opcional)</label>
+                    <select id="z-destinatario" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-rose-500 outline-none"></select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">ID / Modelo</label>
+                        <input type="text" id="z-modelo" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Talla (Mx)</label>
+                        <select id="z-talla" required class="w-full p-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-rose-500 outline-none cursor-pointer"></select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Tienda / Catálogo</label>
+                        <input type="text" id="z-tienda" list="tiendas-existentes" placeholder="Ej. Andrea, Price..." required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Color</label>
+                        <input type="text" id="z-color" required placeholder="Ej. Negro, Rojo..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Marca</label>
+                        <input type="text" id="z-marca" placeholder="Ej. Shosh, Nike..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
+                    <div id="div-z-fecha">
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2 truncate" id="lbl-z-fecha">Fecha (Llegada)</label>
+                        <input type="date" id="z-fecha" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
+                </div>
+                
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal('modal-zapato')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 py-3 bg-rose-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-rose-700 transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Modal Estado de Cuenta / Historial -->
+    <div id="modal-estado-cuenta" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <p class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Historial de Cuenta</p>
+                    <h2 class="text-xl font-black text-slate-800 leading-none mt-1" id="ec-cliente-nombre">Nombre Cliente</h2>
+                </div>
+                <button type="button" onclick="closeModal('modal-estado-cuenta')" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-rose-100 hover:text-rose-600 font-bold text-xl leading-none transition-colors">&times;</button>
+            </div>
+            
+            <div class="overflow-y-auto custom-scrollbar p-6 space-y-6">
+                <!-- Tarjeta Resumen y Botones -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-inner">
+                    <div class="w-full lg:w-auto text-center lg:text-left">
+                        <p class="text-[10px] font-black text-indigo-800 uppercase tracking-widest">Deuda Restante</p>
+                        <p class="text-3xl font-black text-indigo-900" id="ec-deuda-total">$0.00</p>
+                    </div>
+                    <div class="flex flex-row flex-wrap justify-center gap-2 w-full lg:w-auto">
+                        <button onclick="generarPDFEstadoCuenta()" class="flex-1 sm:flex-none px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white font-black text-[10px] uppercase rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+                            Resumen PDF
+                        </button>
+                        <button onclick="openVenderDesdeCliente()" class="flex-1 sm:flex-none px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                            Asignar Zapato
+                        </button>
+                        <button onclick="abrirAbonoDesdeHistorial()" class="flex-1 sm:flex-none px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            Añadir Abono
+                        </button>
+                    </div>
+                </div>
+
+                <div id="ec-seccion-apartados" class="space-y-3 hidden">
+                    <h3 class="text-[11px] font-black text-blue-500 uppercase tracking-widest border-b border-blue-100 pb-2">📦 Apartados y Pedidos</h3>
+                    <div id="ec-lista-apartados" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3">
+                        <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-2">Mercancía Entregada (Adeudos)</h3>
+                        <div id="ec-lista-zapatos" class="space-y-2"></div>
+                    </div>
+                    <div class="space-y-3">
+                        <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-2">Historial de Abonos</h3>
+                        <div id="ec-lista-abonos" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Vender Zapato (Asignar y Cobrar desde Bodega / Apartado) -->
+    <div id="modal-asignar" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 bg-emerald-50">
+                <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Entregar y Cobrar</p>
+                <h2 class="text-xl font-black text-emerald-900">Vender Zapato</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="a-zapato-id">
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 shadow-inner" id="a-zapato-info"></div>
+                
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Cliente que lo recibe</label>
+                    <select id="a-cliente" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none"></select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Precio de Venta ($ Deuda)</label>
+                    <input type="number" id="a-precio" required min="1" step="0.5" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-black text-2xl text-emerald-700 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal('modal-asignar')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button type="button" onclick="confirmarAsignacion()" class="flex-1 py-3 bg-emerald-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-emerald-700 transition-colors">Vender</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Vender Zapato directamente desde el Cliente -->
+    <div id="modal-vender-cliente" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 bg-emerald-50">
+                <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Asignar de Bodega</p>
+                <h2 class="text-xl font-black text-emerald-900">Vender a Cliente</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="vc-cliente-id">
+                
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Seleccionar Zapato de Bodega</label>
+                    <select id="vc-zapato" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none custom-scrollbar"></select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Precio de Venta ($)</label>
+                    <input type="number" id="vc-precio" required min="1" step="0.5" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-black text-2xl text-emerald-700 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00">
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal('modal-vender-cliente')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button type="button" onclick="confirmarVentaDesdeCliente()" class="flex-1 py-3 bg-emerald-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-emerald-700 transition-colors">Asignar Zapato</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Abono y WhatsApp -->
+    <div id="modal-abono" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 bg-indigo-50">
+                <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Gestión de Cobranza</p>
+                <h2 class="text-xl font-black text-indigo-900">Registrar Abono</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="ab-cliente-id">
+                <div class="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-200 shadow-inner">
+                    <span class="text-xs font-black text-slate-600 uppercase" id="ab-cliente-nombre"></span>
+                    <span class="text-sm font-black text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100" id="ab-deuda-actual"></span>
+                </div>
+                
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">¿Cuánto Abonó? ($)</label>
+                    <input type="number" id="ab-monto" required min="1" step="1" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-black text-2xl text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Fecha del Abono</label>
+                    <input type="date" id="ab-fecha" required class="w-full p-3 bg-white border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                
+                <label class="flex items-center gap-3 p-3 mt-2 cursor-pointer group bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors">
+                    <input type="checkbox" id="ab-whatsapp" checked class="w-5 h-5 accent-emerald-600 rounded border-slate-300 cursor-pointer">
+                    <span class="text-xs font-black text-emerald-800 uppercase">Enviar Recibo por WhatsApp</span>
+                </label>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal('modal-abono')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button type="button" onclick="confirmarAbono()" class="flex-1 py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Efectuar Cobro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGICA -->
+    <script>
+        // ======= ESTADO GLOBAL =======
+        let dbZapatos = JSON.parse(localStorage.getItem('db_zapatos')) || [];
+        let dbClientes = JSON.parse(localStorage.getItem('db_clientes')) || [];
+        let githubConfig = JSON.parse(localStorage.getItem('github_config')) || { token: '', user: '', repo: '', path: 'zapatos_mariana_backup.json' };
+        
+        let migrado = false;
+        dbClientes = dbClientes.map(c => {
+            if(!c.diaCobro) { c.diaCobro = 'Otro'; migrado = true; }
+            if(!c.colonia) { c.colonia = c.zona || 'Sin Zona'; migrado = true; }
+            if(!c.direccion) { c.direccion = ''; migrado = true; }
+            return c;
+        });
+        dbZapatos = dbZapatos.map(z => {
+            if(!z.estado) z.estado = 'Bodega';
+            if(!z.color) { z.color = 'S/C'; migrado = true; }
+            return z;
+        });
+        if(migrado) {
+            localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+            localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
+        }
+
+        // ======= INICIALIZACION =======
+        window.onload = () => {
+            document.getElementById('z-fecha').valueAsDate = new Date();
+            document.getElementById('ab-fecha').valueAsDate = new Date();
+            inicializarListaTallas(); 
+            actualizarFiltrosClientes();
+            actualizarFiltrosBodega();
+            actualizarFiltrosPedidos();
+            switchMainView('clientes'); 
+            
+            // Revisar si tenemos cosas por subir antes de hacer cualquier cosa
+            if(localStorage.getItem('pending_sync') === 'true') {
+                marcarSyncPendiente(true);
+                if(navigator.onLine) syncToGithub(); // Subir los datos guardados offline
+            } else {
+                // Si no debemos nada a la nube, podemos bajar lo más reciente
+                if(githubConfig.token && githubConfig.repo && navigator.onLine) {
+                    syncFromGithub(true);
+                }
+            }
+
+            // Cada 30 minutos actualizamos, PERO con cuidado (solo si hay internet)
+            setInterval(() => {
+                if(navigator.onLine && githubConfig.token) {
+                    if (localStorage.getItem('pending_sync') === 'true') {
+                        syncToGithub(); // Primero subimos lo nuestro
+                    } else {
+                        syncFromGithub(true); // O bajamos si estamos al día
+                    }
+                }
+            }, 1800000); // 30 minutos
+        };
+
+        // Escuchar cuando el celular recupera el WiFi o los Datos
+        window.addEventListener('online', () => {
+            if(localStorage.getItem('pending_sync') === 'true') {
+                syncToGithub(); // Subir automáticamente al recuperar señal
+            }
+        });
+
+
+        // ======= GITHUB NUBE - MODO OFFLINE (NUEVO) =======
+        function openGithubModal() {
+            document.getElementById('gh-token').value = githubConfig.token || '';
+            document.getElementById('gh-user').value = githubConfig.user || '';
+            document.getElementById('gh-repo').value = githubConfig.repo || '';
+            document.getElementById('modal-github').classList.remove('hidden');
+        }
+
+        function saveGithubConfig() {
+            githubConfig = {
+                token: document.getElementById('gh-token').value.trim(),
+                user: document.getElementById('gh-user').value.trim(),
+                repo: document.getElementById('gh-repo').value.trim(),
+                path: 'zapatos_mariana_backup.json'
+            };
+            localStorage.setItem('github_config', JSON.stringify(githubConfig));
+            closeModal('modal-github');
+            if(githubConfig.token) syncToGithub(); // Subir de inmediato
+        }
+
+        function marcarSyncPendiente(isPending) {
+            if(isPending) {
+                localStorage.setItem('pending_sync', 'true');
+                document.getElementById('indicador-sync').classList.remove('hidden');
+            } else {
+                localStorage.removeItem('pending_sync');
+                document.getElementById('indicador-sync').classList.add('hidden');
+            }
+        }
+
+        function mostrarNotificacionSync(mensaje, error = false) {
+            const toast = document.getElementById('sync-toast');
+            document.getElementById('sync-toast-text').innerText = mensaje;
+            if(error) {
+                document.getElementById('sync-toast-icon').innerText = '❌';
+                document.getElementById('sync-toast-icon').classList.remove('animate-pulse');
+                toast.classList.replace('bg-slate-800', 'bg-rose-600');
+            } else {
+                document.getElementById('sync-toast-icon').innerText = '☁️';
+                document.getElementById('sync-toast-icon').classList.add('animate-pulse');
+                toast.classList.replace('bg-rose-600', 'bg-slate-800');
+            }
+            toast.classList.remove('translate-y-20', 'opacity-0');
+        }
+
+        function ocultarNotificacionSync() {
+            document.getElementById('sync-toast').classList.add('translate-y-20', 'opacity-0');
+        }
+
+        async function apiGithub(method, body = null) {
+            const { user, repo, path, token } = githubConfig;
+            const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+            const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+            const config = { method, headers };
+            if (body) config.body = JSON.stringify(body);
+            return await fetch(url, config);
+        }
+
+        async function syncToGithub() {
+            if (!githubConfig.token || !githubConfig.repo) return;
+
+            // Si el celular no tiene datos/wifi, no lo intentamos, solo lo marcamos como pendiente
+            if (!navigator.onLine) {
+                marcarSyncPendiente(true);
+                mostrarNotificacionSync("Guardado en el cel (Sin Internet) 📵", false);
+                setTimeout(ocultarNotificacionSync, 3500);
+                return;
+            }
+
+            mostrarNotificacionSync("Respaldando en Nube...");
+            try {
+                let sha = "";
+                const getRes = await apiGithub('GET');
+                if (getRes.ok) {
+                    const getData = await getRes.json();
+                    sha = getData.sha;
+                }
+
+                const backupData = { clientes: dbClientes, zapatos: dbZapatos };
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(backupData))));
+                
+                const putRes = await apiGithub('PUT', {
+                    message: `Auto-Respaldo App Zapatos: ${new Date().toLocaleString()}`,
+                    content: contentBase64,
+                    sha: sha || undefined
+                });
+
+                if (putRes.ok) {
+                    marcarSyncPendiente(false); // Ya se subió, quitamos la alerta
+                    document.getElementById('sync-toast-icon').innerText = '✅';
+                    document.getElementById('sync-toast-icon').classList.remove('animate-pulse');
+                    document.getElementById('sync-toast-text').innerText = 'Respaldo Exitoso';
+                    setTimeout(ocultarNotificacionSync, 2000);
+                } else {
+                    marcarSyncPendiente(true); // Falló, lo dejamos como pendiente
+                    mostrarNotificacionSync("Fallo la subida (Reintentará luego)", true);
+                    setTimeout(ocultarNotificacionSync, 4000);
+                }
+            } catch (e) {
+                console.error(e);
+                marcarSyncPendiente(true);
+                mostrarNotificacionSync("Sin Internet para subir", true);
+                setTimeout(ocultarNotificacionSync, 4000);
+            }
+        }
+
+        async function syncFromGithub(isAuto = false) {
+             if (!githubConfig.token || !githubConfig.repo) return;
+             if (!navigator.onLine && !isAuto) return alert("No tienes internet para descargar la copia de seguridad.");
+             if (!navigator.onLine && isAuto) return;
+
+             if(!isAuto) mostrarNotificacionSync("Descargando Nube...");
+             try {
+                 const getRes = await apiGithub('GET');
+                 if (getRes.ok) {
+                     const getData = await getRes.json();
+                     const contentStr = decodeURIComponent(escape(atob(getData.content)));
+                     const backupData = JSON.parse(contentStr);
+
+                     if (backupData.clientes && backupData.zapatos) {
+                         dbClientes = backupData.clientes;
+                         dbZapatos = backupData.zapatos;
+                         localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+                         localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+
+                         actualizarFiltrosClientes(); actualizarFiltrosBodega(); actualizarFiltrosPedidos();
+
+                         if(!document.getElementById('view-clientes').classList.contains('hidden')) renderClientes();
+                         if(!document.getElementById('view-pedidos').classList.contains('hidden')) renderPedidos();
+                         if(!document.getElementById('view-bodega').classList.contains('hidden')) renderBodega();
+
+                         if(!isAuto) {
+                             document.getElementById('sync-toast-icon').innerText = '✅';
+                             document.getElementById('sync-toast-icon').classList.remove('animate-pulse');
+                             document.getElementById('sync-toast-text').innerText = 'Datos Restaurados';
+                             setTimeout(ocultarNotificacionSync, 2000);
+                         }
+                     }
+                 } else if (getRes.status === 404 && !isAuto) {
+                     mostrarNotificacionSync("Primera vez, creando archivo...");
+                     await syncToGithub();
+                 } else if (!isAuto) {
+                     mostrarNotificacionSync("Error al descargar", true);
+                     setTimeout(ocultarNotificacionSync, 4000);
+                 }
+             } catch (e) {
+                 console.error(e);
+                 if(!isAuto) {
+                     mostrarNotificacionSync("Sin Internet para descargar", true);
+                     setTimeout(ocultarNotificacionSync, 4000);
+                 }
+             }
+        }
+
+
+        // LLENAR LISTA DE TALLAS DE 0.5 EN 0.5
+        function inicializarListaTallas() {
+            const selectTalla = document.getElementById('z-talla');
+            let opcionesHtml = '<option value="">-- Elige Talla --</option>';
+            for(let i = 10; i <= 30; i += 0.5) { opcionesHtml += `<option value="${i}">${i}</option>`; }
+            opcionesHtml += '<option value="Ropa / Otro">👗 Ropa / Accesorio</option><option value="Unitalla">⭐ Unitalla</option>';
+            selectTalla.innerHTML = opcionesHtml;
+        }
+
+        // ======= NAVEGACION =======
+        function switchMainView(view) {
+            document.getElementById('view-bodega').classList.add('hidden');
+            document.getElementById('view-clientes').classList.add('hidden');
+            document.getElementById('view-pedidos').classList.add('hidden');
+            document.getElementById(`view-${view}`).classList.remove('hidden');
+
+            const inactiveClass = 'flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white flex justify-center items-center gap-2 whitespace-nowrap';
+            const activeClass = 'flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all bg-indigo-600 text-white shadow-md flex justify-center items-center gap-2 whitespace-nowrap';
+            const activeBlueClass = 'flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all bg-blue-600 text-white shadow-md flex justify-center items-center gap-2 whitespace-nowrap';
+            const activeRoseClass = 'flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-xs transition-all bg-rose-600 text-white shadow-md flex justify-center items-center gap-2 whitespace-nowrap';
+
+            document.getElementById('nav-clientes').className = inactiveClass;
+            document.getElementById('nav-pedidos').className = inactiveClass;
+            document.getElementById('nav-bodega').className = inactiveClass;
+
+            if(view === 'clientes') { document.getElementById('nav-clientes').className = activeClass; renderClientes(); }
+            else if (view === 'pedidos') { document.getElementById('nav-pedidos').className = activeBlueClass; renderPedidos(); }
+            else { document.getElementById('nav-bodega').className = activeRoseClass; renderBodega(); }
+        }
+
+        // ======= UTILIDADES =======
+        const money = (m) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(m || 0);
+        const uuid = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
+        
+        function calcularDiasDesde(fechaLimite) {
+            if(!fechaLimite) return 0;
+            const fecha = new Date(fechaLimite);
+            const hoy = new Date();
+            const diffTime = Math.abs(hoy - fecha);
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function getClienteNombre(id) {
+            const c = dbClientes.find(x => x.id === id);
+            return c ? c.nombre : 'Desconocido';
+        }
+
+        function calcularDeuda(cliente) {
+            const zapatosAsignados = dbZapatos.filter(z => z.clienteId === cliente.id && z.estado === 'Asignado');
+            const totalZapatos = zapatosAsignados.reduce((acc, z) => acc + (Number(z.precioVenta) || 0), 0);
+            const totalAbonos = (cliente.abonos || []).reduce((acc, a) => acc + (Number(a.monto) || 0), 0);
+            return totalZapatos - totalAbonos;
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function formatFecha(fecha) {
+            if(!fecha) return 'S/F';
+            const parts = fecha.split('-');
+            if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return fecha;
+        }
+
+        // ================= CLIENTES Y RUTAS =================
+        function actualizarFiltrosClientes() {
+            const listData = document.getElementById('colonias-existentes');
+            const selectFiltro = document.getElementById('filter-colonia');
+            const colonias = [...new Set(dbClientes.map(c => c.colonia))].filter(Boolean).sort();
+            
+            listData.innerHTML = colonias.map(z => `<option value="${z}">`).join('');
+            
+            let val = selectFiltro.value || 'Todos'; 
+            selectFiltro.innerHTML = '<option value="Todos">Todas las Colonias</option>' + 
+                                     colonias.map(c => `<option value="${c}">${c}</option>`).join('');
+            if(colonias.includes(val)) selectFiltro.value = val;
+        }
+
+        function openClienteModal(id = null) {
+            document.getElementById('form-cliente').reset();
+            if (id) {
+                const c = dbClientes.find(x => x.id === id);
+                document.getElementById('c-id').value = c.id;
+                document.getElementById('c-nombre').value = c.nombre;
+                document.getElementById('c-tel').value = c.telefono || '';
+                document.getElementById('c-dia').value = c.diaCobro;
+                document.getElementById('c-colonia').value = c.colonia;
+                document.getElementById('c-direccion').value = c.direccion;
+                document.getElementById('titulo-cliente').innerText = "Editar Cliente";
+                document.getElementById('btn-borrar-cliente').classList.remove('hidden');
+            } else {
+                document.getElementById('c-id').value = '';
+                document.getElementById('c-tel').value = '+52 ';
+                document.getElementById('titulo-cliente').innerText = "Nuevo Cliente";
+                document.getElementById('btn-borrar-cliente').classList.add('hidden');
+            }
+            document.getElementById('modal-cliente').classList.remove('hidden');
+        }
+
+        function saveCliente(e) {
+            e.preventDefault();
+            const id = document.getElementById('c-id').value;
+            let nuevoOrden = 0;
+            if(!id && dbClientes.length > 0) nuevoOrden = Math.max(...dbClientes.map(c => c.orden || 0)) + 1;
+
+            const data = {
+                id: id || uuid(),
+                nombre: document.getElementById('c-nombre').value.toUpperCase().trim(),
+                telefono: document.getElementById('c-tel').value.trim(),
+                diaCobro: document.getElementById('c-dia').value,
+                colonia: document.getElementById('c-colonia').value.toUpperCase().trim(),
+                direccion: document.getElementById('c-direccion').value.trim(),
+                orden: id ? dbClientes.find(x=>x.id===id).orden : nuevoOrden,
+                abonos: id ? dbClientes.find(x=>x.id===id).abonos : []
+            };
+
+            if (id) dbClientes[dbClientes.findIndex(x => x.id === id)] = data;
+            else dbClientes.push(data);
+
+            localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+            actualizarFiltrosClientes();
+            closeModal('modal-cliente');
+            renderClientes();
+            syncToGithub(); // SUBIR A NUBE
+        }
+
+        function borrarCliente() {
+            const id = document.getElementById('c-id').value;
+            if(!id) return;
+
+            if(dbZapatos.filter(z => z.clienteId === id && z.estado === 'Asignado').length > 0) {
+                alert("⛔ No puedes eliminar a un cliente que aún tiene zapatos entregados (Adeudo activo)."); return;
+            }
+
+            if(confirm("¿Estás 100% seguro de eliminar este cliente?")) {
+                dbClientes = dbClientes.filter(c => c.id !== id);
+                dbZapatos = dbZapatos.map(z => { if(z.clienteId === id) z.clienteId = null; return z; });
+                
+                localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+                localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                
+                closeModal('modal-cliente');
+                actualizarFiltrosClientes();
+                renderClientes();
+                syncToGithub(); // SUBIR A NUBE
+            }
+        }
+
+        function moverCliente(id, direccion) {
+            const agruparPor = document.getElementById('agrupar-por').value;
+            const clienteToMove = dbClientes.find(c => c.id === id);
+            const groupKey = agruparPor === 'diaCobro' ? clienteToMove.diaCobro : clienteToMove.colonia;
+            
+            let groupClients = dbClientes.filter(c => (agruparPor === 'diaCobro' ? c.diaCobro : c.colonia) === groupKey);
+            groupClients.sort((a,b) => (a.orden || 0) - (b.orden || 0));
+            groupClients.forEach((c, i) => c.orden = i);
+            
+            const idx = groupClients.findIndex(c => c.id === id);
+            
+            if(direccion === -1 && idx > 0) { 
+                let temp = groupClients[idx].orden; groupClients[idx].orden = groupClients[idx-1].orden; groupClients[idx-1].orden = temp;
+            } else if (direccion === 1 && idx < groupClients.length - 1) {
+                let temp = groupClients[idx].orden; groupClients[idx].orden = groupClients[idx+1].orden; groupClients[idx+1].orden = temp;
+            }
+
+            localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+            renderClientes();
+            syncToGithub(); // SUBIR A NUBE
+        }
+
+        function renderClientes() {
+            const list = document.getElementById('lista-clientes');
+            let deudaGlobal = 0;
+
+            const search = document.getElementById('search-clientes').value.toLowerCase();
+            const filterDia = document.getElementById('filter-dia').value;
+            const filterColonia = document.getElementById('filter-colonia').value;
+            const agruparPor = document.getElementById('agrupar-por').value;
+
+            const isTodosDia = !filterDia || filterDia === 'Todos';
+            const isTodosColonia = !filterColonia || filterColonia === 'Todos';
+
+            let filtered = dbClientes.filter(c => {
+                const matchSearch = `${c.nombre} ${c.direccion} ${c.telefono}`.toLowerCase().includes(search);
+                return matchSearch && (isTodosDia || c.diaCobro === filterDia) && (isTodosColonia || c.colonia === filterColonia);
+            });
+
+            if(filtered.length === 0) {
+                list.innerHTML = `<div class="text-center py-12 bg-white rounded-3xl border border-slate-200"><p class="text-slate-400 font-bold uppercase tracking-widest">No hay clientes con esos filtros</p></div>`;
+                document.getElementById('stat-deuda-global').innerText = '$0.00';
+                return;
+            }
+
+            const gruposSet = [...new Set(filtered.map(c => c[agruparPor]))].sort();
+            let html = '';
+            
+            gruposSet.forEach(grupoVal => {
+                const clientesEnGrupo = filtered.filter(c => c[agruparPor] === grupoVal).sort((a,b) => (a.orden||0) - (b.orden||0));
+                let totalGrupo = 0;
+                
+                let cardsHtml = clientesEnGrupo.map((c, i) => {
+                    const deuda = calcularDeuda(c); totalGrupo += deuda; deudaGlobal += deuda;
+                    const hasUp = i > 0 && search === '';
+                    const hasDown = i < clientesEnGrupo.length - 1 && search === '';
+                    const zapsAsignados = dbZapatos.filter(z => z.clienteId === c.id && z.estado === 'Asignado');
+                    const zapsPendientes = dbZapatos.filter(z => z.clienteId === c.id && (z.estado === 'Pedido' || z.estado === 'Bodega'));
+                    let alertPendientes = zapsPendientes.length > 0 ? `<span class="bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-full border border-blue-200 ml-1">${zapsPendientes.length} por entregar</span>` : '';
+
+                    return `
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex gap-3 min-w-[200px]">
+                            <div class="flex flex-col gap-1 w-7 justify-center flex-shrink-0">
+                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
+                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
+                            </div>
+                            <div class="flex flex-col justify-center">
+                                <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre}</p>
+                                <div class="mt-1 space-y-0.5">
+                                    <p class="text-[10px] font-bold text-slate-500">📞 ${c.telefono || 'S/N'}</p>
+                                    <p class="text-[10px] font-bold text-slate-500">📍 ${c.colonia} • ${c.direccion ? c.direccion : 'Sin calle'}</p>
+                                    <p class="text-[10px] font-bold text-indigo-500 uppercase mt-0.5">📅 Día: ${c.diaCobro}</p>
+                                </div>
+                                <button onclick="openClienteModal('${c.id}')" class="mt-2 text-[9px] font-black bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded hover:text-indigo-600 uppercase shadow-sm self-start">Editar Perfil</button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col flex-grow justify-center md:max-w-[200px] gap-2">
+                             <button onclick="openEstadoCuenta('${c.id}')" class="w-full py-3 bg-white border-2 border-indigo-100 hover:border-indigo-400 text-indigo-700 font-black rounded-xl text-[10px] uppercase shadow-sm transition-all flex flex-col items-center justify-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                Ver Estado de Cuenta
+                                <div class="flex flex-wrap justify-center items-center gap-1 mt-1"><span class="text-[8px] font-bold text-slate-400">${zapsAsignados.length} activos</span>${alertPendientes}</div>
+                             </button>
+                        </div>
+
+                        <div class="flex flex-col justify-between items-end min-w-[140px] bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-right w-full">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Pendiente</p>
+                                <p class="text-2xl font-black ${deuda > 0 ? 'text-rose-600' : 'text-emerald-500'} leading-none">${money(deuda)}</p>
+                            </div>
+                            <button onclick="openAbonoModal('${c.id}')" class="mt-3 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-lg text-[10px] uppercase shadow-md transition-all">Registrar Abono</button>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                html += `
+                <div class="bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm">
+                    <div class="flex justify-between items-end border-b border-slate-100 pb-3 mb-4">
+                        <h3 class="text-xl font-black text-slate-800 uppercase flex items-center gap-2"><svg class="text-indigo-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> ${agruparPor === 'diaCobro' ? 'Ruta' : 'Zona'}: ${grupoVal}</h3>
+                        <div class="text-right"><p class="text-[9px] font-black text-slate-400 uppercase">Subtotal Grupo</p><p class="text-sm font-black text-emerald-600">${money(totalGrupo)}</p></div>
+                    </div>
+                    <div class="space-y-3">${cardsHtml}</div>
+                </div>`;
+            });
+
+            document.getElementById('stat-deuda-global').innerText = money(deudaGlobal);
+            list.innerHTML = html;
+        }
+
+        // ================= ESTADO DE CUENTA =================
+        function openEstadoCuenta(idCliente) {
+            const cliente = dbClientes.find(c => c.id === idCliente);
+            if(!cliente) return;
+            document.getElementById('ec-cliente-nombre').innerText = cliente.nombre;
+            document.getElementById('ec-deuda-total').innerText = money(calcularDeuda(cliente));
+            document.getElementById('modal-estado-cuenta').dataset.clienteId = idCliente;
+
+            // Zapatos
+            const zaps = dbZapatos.filter(z => z.clienteId === idCliente && z.estado === 'Asignado');
+            const zapsContainer = document.getElementById('ec-lista-zapatos');
+            if(zaps.length === 0) zapsContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center">No debe mercancía.</p>`;
+            else zapsContainer.innerHTML = zaps.map(z => {
+                const dias = calcularDiasDesde(z.fechaLlegada);
+                let badge = dias > 30 ? `<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-black text-[9px] alerta-critica shadow-sm">Lleva ${dias} días</span>` :
+                            dias > 25 ? `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-black text-[9px]">Alerta catálogo (${dias}/30)</span>` :
+                            `<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-bold text-[9px] border border-slate-200">${dias} días</span>`;
+                return `
+                <div class="bg-white border ${dias > 30 ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200'} p-3 rounded-xl shadow-sm">
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="font-black text-slate-700 uppercase text-sm">${z.modelo}</p>
+                            <p class="text-[10px] font-bold text-slate-500">${z.tienda} • Talla ${z.talla} • Color: ${z.color}</p>
+                        </div>
+                        <p class="font-black text-emerald-700">${money(z.precioVenta)}</p>
+                    </div>
+                    <div class="mt-1">${badge}</div>
+                    <div class="flex justify-between items-center border-t border-slate-100 pt-2 mt-1">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Entregado: ${formatFecha(z.fechaAsignacion)}</span>
+                        <button onclick="devolverZapatoDeCliente('${z.id}', '${idCliente}', ${dias})" class="px-3 py-1 bg-amber-50 text-amber-700 hover:bg-amber-100 font-black rounded-lg text-[9px] uppercase border border-amber-200">Devuelve</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Apartados
+            const apartados = dbZapatos.filter(z => z.clienteId === idCliente && (z.estado === 'Pedido' || z.estado === 'Bodega'));
+            const secApartados = document.getElementById('ec-seccion-apartados');
+            const contApartados = document.getElementById('ec-lista-apartados');
+            if(apartados.length > 0) {
+                secApartados.classList.remove('hidden');
+                contApartados.innerHTML = apartados.map(z => {
+                    const isPedido = z.estado === 'Pedido';
+                    return `
+                    <div class="bg-${isPedido?'blue':'emerald'}-50 border border-${isPedido?'blue':'emerald'}-${isPedido?'100':'200'} p-2.5 rounded-xl flex justify-between shadow-sm">
+                        <div>
+                            <p class="font-black text-${isPedido?'blue':'emerald'}-900 uppercase text-xs">${z.modelo}</p>
+                            <p class="text-[9px] font-bold text-${isPedido?'blue':'emerald'}-600">${z.tienda} • Talla ${z.talla} • ${z.color}</p>
+                        </div>
+                        ${isPedido ? '<span class="px-2 py-1 bg-white text-blue-500 text-[8px] font-black uppercase rounded">⏳ Por Surtir</span>' : `<button onclick="openAsignarModal('${z.id}')" class="px-2 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-black uppercase rounded">Entregar</button>`}
+                    </div>`;
+                }).join('');
+            } else secApartados.classList.add('hidden');
+
+            // Abonos
+            const abonos = cliente.abonos || [];
+            const abonosContainer = document.getElementById('ec-lista-abonos');
+            if(abonos.length === 0) abonosContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center">No hay abonos.</p>`;
+            else abonosContainer.innerHTML = [...abonos].reverse().map(a => `
+                <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                        <div><p class="text-[10px] font-black text-slate-400 uppercase">Pago realizado</p><p class="text-xs font-bold text-slate-700">${formatFecha(a.fecha)}</p></div>
+                    </div>
+                    <div class="flex items-center gap-3"><p class="font-black text-indigo-700">${money(a.monto)}</p><button onclick="borrarAbono('${idCliente}', '${a.id}')" class="text-slate-300 hover:text-rose-500 bg-white rounded-full p-1 border border-slate-200"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+                </div>`).join('');
+
+            document.getElementById('modal-estado-cuenta').classList.remove('hidden');
+        }
+
+        function borrarAbono(idCliente, idAbono) {
+            if(confirm("¿Eliminar este abono? La deuda aumentará.")) {
+                const cliente = dbClientes.find(c => c.id === idCliente);
+                cliente.abonos = cliente.abonos.filter(a => a.id !== idAbono);
+                localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+                renderClientes(); openEstadoCuenta(idCliente);
+                syncToGithub(); // SUBIR A NUBE
+            }
+        }
+
+        function devolverZapatoDeCliente(idZapato, idCliente, dias) {
+            if(confirm(dias > 30 ? `🚨 FUERA DE TIEMPO (Lleva ${dias} días). ¿Aceptar y dejarlo atorado en bodega?` : `¿Aceptar devolución y pasarlo a bodega?`)) {
+                const z = dbZapatos.find(x => x.id === idZapato);
+                z.estado = 'Devolución'; z.clienteId = null; z.precioVenta = null; z.fechaAsignacion = null; 
+                localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                renderClientes(); renderBodega(); openEstadoCuenta(idCliente); 
+                syncToGithub(); // SUBIR A NUBE
+            }
+        }
+
+        // ================= PDF =================
+        function generarPDFEstadoCuenta() {
+            const idCliente = document.getElementById('modal-estado-cuenta').dataset.clienteId;
+            const cliente = dbClientes.find(c => c.id === idCliente);
+            const deudaTotal = calcularDeuda(cliente);
+            const zaps = dbZapatos.filter(z => z.clienteId === idCliente && z.estado === 'Asignado');
+            const abonos = cliente.abonos ? [...cliente.abonos].reverse() : [];
+            const fechaHoy = new Date().toLocaleDateString('es-MX');
+
+            let htmlContent = `
+                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a;">
+                    <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
+                        <h1 style="color: #1e293b; margin: 0; font-size: 26px; text-transform: uppercase; font-weight: 900;">Zapatos Mariana</h1>
+                        <h2 style="color: #475569; margin: 5px 0; font-size: 16px; font-weight: 600;">Estado de Cuenta Detallado</h2>
+                        <p style="color: #64748b; font-size: 11px; margin: 0;">Generado: ${fechaHoy}</p>
+                    </div>
+                    
+                    <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 25px; background-color: #f8fafc;">
+                        <table style="width: 100%; font-size: 12px; text-align: left;">
+                            <tr><td style="padding: 4px;"><strong>Cliente:</strong> ${cliente.nombre}</td><td style="padding: 4px;"><strong>Teléfono:</strong> ${cliente.telefono || 'S/N'}</td></tr>
+                            <tr><td style="padding: 4px;"><strong>Zona:</strong> ${cliente.colonia}</td><td style="padding: 4px;"><strong>Día:</strong> ${cliente.diaCobro}</td></tr>
+                            <tr><td colspan="2" style="padding: 4px;"><strong>Dirección:</strong> ${cliente.direccion || 'S/D'}</td></tr>
+                        </table>
+                    </div>
+
+                    <div style="text-align: right; margin-bottom: 25px; background-color: ${deudaTotal > 0 ? '#fff1f2' : '#f0fdf4'}; padding: 15px; border-radius: 8px; border: 1px solid ${deudaTotal > 0 ? '#fecdd3' : '#dcfce3'};">
+                        <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: bold;">Saldo Restante: <span style="color: ${deudaTotal > 0 ? '#e11d48' : '#10b981'}; font-size: 24px; margin-left: 10px;">${money(deudaTotal)}</span></h3>
+                    </div>
+
+                    <h3 style="color: #334155; font-size: 14px; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 10px; font-weight: bold;">Mercancía Entregada (Adeudos)</h3>
+                    ${zaps.length > 0 ? `<table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
+                        <thead><tr style="background-color: #f1f5f9; text-align: left;">
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Tienda</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Marca</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Modelo</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Talla / Color</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Fecha</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Costo</th>
+                        </tr></thead>
+                        <tbody>${zaps.map(z => `<tr>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0;">${z.tienda}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">${z.modelo}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #e11d48; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #e11d48; font-weight: bold;">${money(z.precioVenta)}</td>
+                        </tr>`).join('')}</tbody>
+                    </table>` : '<p style="font-size: 12px; color: #64748b; margin-bottom: 25px;">No debe mercancía.</p>'}
+
+                    <h3 style="color: #334155; font-size: 14px; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 10px; font-weight: bold;">Historial de Abonos</h3>
+                    ${abonos.length > 0 ? `<table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                        <thead><tr style="background-color: #f1f5f9; text-align: left;"><th style="padding: 8px; border: 1px solid #e2e8f0;">Fecha</th><th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Monto Pagado</th></tr></thead>
+                        <tbody>${abonos.map(a => `<tr><td style="padding: 8px; border: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td><td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">${money(a.monto)}</td></tr>`).join('')}</tbody>
+                    </table>` : '<p style="font-size: 12px; color: #64748b;">No hay abonos.</p>'}
+                </div>
+            `;
+            html2pdf().set({margin: 0.4, filename: `Cuenta_${cliente.nombre}.pdf`, html2canvas: { scale: 2 }}).from(document.createElement('div').insertAdjacentHTML('beforeend', htmlContent).parentNode).save();
+        }
+
+
+        // ================= PEDIDOS =================
+        function actualizarFiltrosPedidos() {
+            const selectFiltro = document.getElementById('filter-tienda-pedidos');
+            const tiendas = [...new Set(dbZapatos.filter(z => z.estado === 'Pedido').map(z => z.tienda))].filter(Boolean).sort();
+            let val = selectFiltro.value || 'Todas'; 
+            selectFiltro.innerHTML = '<option value="Todas">Todas las Tiendas (Filtro)</option>' + tiendas.map(t => `<option value="${t}">${t}</option>`).join('');
+            if(tiendas.includes(val)) selectFiltro.value = val; else selectFiltro.value = 'Todas';
+        }
+
+        function renderPedidos() {
+            const list = document.getElementById('lista-pedidos');
+            const filterTienda = document.getElementById('filter-tienda-pedidos').value;
+            let pedidos = dbZapatos.filter(z => z.estado === 'Pedido');
+            document.getElementById('stat-total-pedidos').innerText = pedidos.length;
+
+            if (filterTienda !== 'Todas') pedidos = pedidos.filter(z => z.tienda === filterTienda);
+            pedidos.sort((a, b) => new Date(b.fechaLlegada) - new Date(a.fechaLlegada));
+            
+            if (pedidos.length === 0) { list.innerHTML = `<div class="col-span-full py-10 text-center text-blue-400 font-bold uppercase tracking-widest bg-white rounded-3xl border border-blue-100">Vacío</div>`; return; }
+
+            list.innerHTML = pedidos.map(z => `
+                <div class="bg-white rounded-2xl p-4 border border-blue-200 shadow-sm relative flex flex-col gap-3">
+                    <div>
+                        <p class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-0.5">Surtir en: ${z.tienda}</p>
+                        <p class="font-black text-slate-800 text-lg leading-none">${z.modelo}</p>
+                        <p class="text-xs font-bold text-slate-500 mt-1">${z.marca || 'S/M'} • Talla: <span class="text-blue-600 px-1 bg-blue-50 rounded">${z.talla}</span></p>
+                        <p class="text-xs font-bold text-slate-500 mt-0.5">Color: <span class="text-slate-800 uppercase">${z.color}</span></p>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-100 p-2 rounded-lg mt-1">
+                        <p class="text-[9px] font-black text-blue-400 uppercase">Para el cliente:</p>
+                        <p class="text-xs font-black text-blue-800 truncate">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</p>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-auto pt-3 border-t border-slate-100">
+                        <button onclick="marcarPedidoLlegado('${z.id}')" class="w-full py-2 bg-emerald-600 text-white font-black rounded-lg text-[10px] uppercase shadow-sm">✔️ Ya lo traje</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="openZapatoModal('${z.id}')" class="py-2 bg-slate-100 text-slate-600 font-black rounded-lg text-[10px] uppercase border border-slate-200">Editar</button>
+                            <button onclick="borrarZapato('${z.id}', 'pedidos')" class="py-2 bg-rose-50 text-rose-700 font-black rounded-lg text-[10px] uppercase border border-rose-200">❌ No hubo</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function marcarPedidoLlegado(id) {
+            if(confirm("¿Confirmas que ya trajiste este zapato? Pasará a Bodega Físicamente.")) {
+                const z = dbZapatos.find(x => x.id === id); z.estado = 'Bodega';
+                z.fechaLlegada = (new Date(new Date() - (new Date().getTimezoneOffset() * 60000))).toISOString().split('T')[0];
+                localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                actualizarFiltrosPedidos(); renderPedidos();
+                syncToGithub(); // SUBIR A NUBE
+            }
+        }
+
+        function generarPDFPedidos() {
+            const filterTienda = document.getElementById('filter-tienda-pedidos').value;
+            let pedidos = dbZapatos.filter(z => z.estado === 'Pedido');
+            if (filterTienda !== 'Todas') pedidos = pedidos.filter(z => z.tienda === filterTienda);
+            if(pedidos.length === 0) return alert("Vacío.");
+            
+            let htmlContent = `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="text-align: center; color: #1e3a8a;">Encargos / Pedidos ${filterTienda !== 'Todas' ? '- ' + filterTienda : ''}</h2>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
+                        <tr style="background-color: #eff6ff; text-align: left;">
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Tienda</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Marca</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Modelo</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Talla / Color</th>
+                            <th style="padding: 8px; border: 1px solid #e2e8f0;">Para Cliente</th>
+                        </tr>
+                        ${pedidos.map(z => `<tr>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0;">${z.modelo}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal;">(${z.color})</span></td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</td>
+                        </tr>`).join('')}
+                    </table>
+                </div>`;
+            html2pdf().set({margin: 0.5, filename: `Encargos_${filterTienda}.pdf`}).from(document.createElement('div').insertAdjacentHTML('beforeend', htmlContent).parentNode).save();
+        }
+
+        // ================= BODEGA =================
+        function actualizarFiltrosBodega() {
+            const listData = document.getElementById('tiendas-existentes');
+            const selectFiltro = document.getElementById('filter-tienda-bodega');
+            const tiendas = [...new Set(dbZapatos.map(z => z.tienda))].filter(Boolean).sort();
+            listData.innerHTML = tiendas.map(t => `<option value="${t}">`).join('');
+            let val = selectFiltro.value || 'Todas'; 
+            selectFiltro.innerHTML = '<option value="Todas">Todas las Tiendas</option>' + tiendas.map(t => `<option value="${t}">${t}</option>`).join('');
+            if(tiendas.includes(val)) selectFiltro.value = val; else selectFiltro.value = 'Todas';
+        }
+
+        function toggleFechaModal() {
+            document.getElementById('lbl-z-fecha').innerText = document.getElementById('z-estado').value === 'Pedido' ? 'Fecha de Encargo' : 'Fecha de Llegada Física';
+        }
+
+        function openZapatoModal(id = null, forceEstado = null) {
+            document.getElementById('form-zapato').reset();
+            document.getElementById('z-fecha').valueAsDate = new Date();
+            const selDest = document.getElementById('z-destinatario');
+            selDest.innerHTML = '<option value="">-- Libre (Sin asignar) --</option>' + dbClientes.sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+            const selectTalla = document.getElementById('z-talla');
+
+            if (id && id !== 'nuevo') {
+                const z = dbZapatos.find(x => x.id === id);
+                document.getElementById('zapato-id').value = z.id; document.getElementById('z-modelo').value = z.modelo;
+                document.getElementById('z-tienda').value = z.tienda; document.getElementById('z-marca').value = z.marca || '';
+                document.getElementById('z-color').value = z.color || ''; document.getElementById('z-fecha').value = z.fechaLlegada;
+                document.getElementById('z-estado').value = z.estado; document.getElementById('z-destinatario').value = z.clienteId || '';
+                if (!Array.from(selectTalla.options).some(opt => opt.value === z.talla)) selectTalla.insertAdjacentHTML('beforeend', `<option value="${z.talla}">${z.talla}</option>`);
+                selectTalla.value = z.talla; document.getElementById('titulo-zapato').innerText = "Editar Registro";
+            } else {
+                document.getElementById('zapato-id').value = ''; document.getElementById('titulo-zapato').innerText = "Nuevo Registro";
+                selectTalla.value = ""; if(forceEstado) document.getElementById('z-estado').value = forceEstado;
+            }
+            toggleFechaModal(); document.getElementById('modal-zapato').classList.remove('hidden');
+        }
+
+        function saveZapato(e) {
+            e.preventDefault();
+            const id = document.getElementById('zapato-id').value;
+            const destVal = document.getElementById('z-destinatario').value;
+            const estadoSel = document.getElementById('z-estado').value;
+
+            const data = {
+                id: id || uuid(), modelo: document.getElementById('z-modelo').value.toUpperCase().trim(),
+                talla: document.getElementById('z-talla').value.trim(), tienda: document.getElementById('z-tienda').value.toUpperCase().trim(),
+                marca: document.getElementById('z-marca').value.toUpperCase().trim(), color: document.getElementById('z-color').value.toUpperCase().trim() || 'S/C',
+                fechaLlegada: document.getElementById('z-fecha').value, estado: estadoSel, clienteId: destVal ? destVal : null, precioVenta: null, fechaAsignacion: null
+            };
+
+            if (id) {
+                const idx = dbZapatos.findIndex(x => x.id === id);
+                if (dbZapatos[idx].estado === 'Asignado' && estadoSel === 'Asignado') { data.clienteId = dbZapatos[idx].clienteId; data.precioVenta = dbZapatos[idx].precioVenta; data.fechaAsignacion = dbZapatos[idx].fechaAsignacion; }
+                else if (dbZapatos[idx].estado === 'Asignado' && estadoSel !== 'Asignado') { data.precioVenta = null; data.fechaAsignacion = null; }
+                dbZapatos[idx] = data;
+            } else dbZapatos.push(data);
+
+            localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+            actualizarFiltrosBodega(); actualizarFiltrosPedidos(); closeModal('modal-zapato');
+            
+            if(!document.getElementById('view-pedidos').classList.contains('hidden')) renderPedidos();
+            if(!document.getElementById('view-bodega').classList.contains('hidden')) renderBodega();
+            if(!document.getElementById('view-clientes').classList.contains('hidden')) renderClientes();
+            
+            syncToGithub(); // SUBIR A NUBE
+        }
+
+        function borrarZapato(id, vista = 'bodega') {
+            if(confirm('¿Eliminar definitivamente este registro?')) {
+                dbZapatos = dbZapatos.filter(z => z.id !== id); localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                actualizarFiltrosBodega(); actualizarFiltrosPedidos();
+                if(vista === 'pedidos') renderPedidos(); else renderBodega();
+                syncToGithub(); // SUBIR A NUBE
+            }
+        }
+
+        function mandarBodegaADevolucion(idZapato) {
+            if(confirm("¿Marcar para Devolución a Tienda?")) {
+                const z = dbZapatos.find(x => x.id === idZapato); z.estado = 'Devolución'; z.clienteId = null; 
+                localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); renderBodega();
+                syncToGithub(); // SUBIR A NUBE
+            }
+        }
+
+        function setFiltroBodega(estado) {
+            document.getElementById('filter-bodega').value = estado;
+            document.getElementById('filter-tienda-bodega').value = 'Todas'; document.getElementById('search-bodega').value = '';
+            renderBodega(); document.getElementById('filter-bodega').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function renderBodega() {
+            const list = document.getElementById('lista-bodega');
+            const search = document.getElementById('search-bodega').value.toLowerCase();
+            const filterEstado = document.getElementById('filter-bodega').value;
+            const filterTienda = document.getElementById('filter-tienda-bodega').value;
+
+            const isTodosEstado = !filterEstado || filterEstado === 'Todos';
+            const isTodasTienda = !filterTienda || filterTienda === 'Todas';
+
+            let filtered = dbZapatos.filter(z => {
+                if(z.estado === 'Pedido' || (z.estado === 'Devuelto a Tienda' && !isTodosEstado && filterEstado !== 'Devuelto a Tienda')) return false;
+                const txt = `${z.modelo} ${z.marca} ${z.tienda} ${z.talla} ${z.color} ${z.fechaLlegada} ${z.clienteId ? getClienteNombre(z.clienteId) : ''}`.toLowerCase();
+                let matchEstado = isTodosEstado ? z.estado !== 'Devuelto a Tienda' : filterEstado === 'Riesgo' ? (z.estado === 'Bodega' || z.estado === 'Asignado') && calcularDiasDesde(z.fechaLlegada) > 30 : z.estado === filterEstado;
+                return txt.includes(search) && matchEstado && (isTodasTienda || z.tienda === filterTienda);
+            }).sort((a, b) => new Date(b.fechaLlegada) - new Date(a.fechaLlegada));
+
+            document.getElementById('stat-bodega').innerText = dbZapatos.filter(z => z.estado === 'Bodega').length;
+            document.getElementById('stat-asignados').innerText = dbZapatos.filter(z => z.estado === 'Asignado').length;
+            document.getElementById('stat-devolucion').innerText = dbZapatos.filter(z => z.estado === 'Devolución').length;
+            document.getElementById('stat-vencidos').innerText = dbZapatos.filter(z => (z.estado === 'Bodega' || z.estado === 'Asignado') && calcularDiasDesde(z.fechaLlegada) > 30).length;
+
+            if (filtered.length === 0) { list.innerHTML = `<div class="col-span-full py-10 text-center text-slate-400 font-bold uppercase tracking-widest bg-white rounded-3xl border border-slate-200">Vacío</div>`; return; }
+
+            list.innerHTML = filtered.map(z => {
+                const dias = calcularDiasDesde(z.fechaLlegada);
+                let badge = z.estado === 'Bodega' ? `<span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-[9px] font-black uppercase border border-slate-200">Físico Bodega</span>` :
+                            z.estado === 'Devolución' ? `<span class="px-2 py-1 rounded bg-amber-100 text-amber-700 text-[9px] font-black uppercase border border-amber-200">A devolver</span>` :
+                            z.estado === 'Asignado' ? `<span class="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase border border-emerald-200 truncate">Vendido: ${getClienteNombre(z.clienteId)}</span>` :
+                            `<span class="px-2 py-1 rounded bg-slate-800 text-white text-[9px] font-black uppercase shadow">Baja</span>`;
+
+                return `
+                <div class="bg-white rounded-2xl p-4 border ${dias > 30 && (z.estado === 'Bodega' || z.estado === 'Asignado') ? 'border-rose-300 bg-rose-50' : 'border-slate-200'} shadow-sm flex flex-col gap-3">
+                    <div>
+                        <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Catálogo: ${z.tienda}</p>
+                        <p class="font-black text-slate-800 text-lg leading-none">${z.modelo}</p>
+                        <div class="flex justify-between items-center mt-1">
+                            <p class="text-xs font-bold text-slate-500">${z.marca || 'S/M'} • Talla: <span class="text-rose-600 px-1 bg-rose-50 rounded">${z.talla}</span></p>
+                            <span class="text-[9px] font-bold ${dias > 30 ? 'text-rose-600 border-rose-300' : 'text-slate-400 border-slate-200'} border px-1.5 rounded">${dias} días</span>
+                        </div>
+                        <p class="text-xs font-bold text-slate-500 mt-0.5">Color: <span class="text-slate-800 uppercase">${z.color}</span></p>
+                        ${z.estado === 'Bodega' && z.clienteId ? `<p class="text-[9px] font-black bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 mt-1 truncate">📌 Apartado: ${getClienteNombre(z.clienteId)}</p>` : ''}
+                    </div>
+                    <div class="flex flex-col gap-2 mt-auto pt-2"><div class="text-[9px] font-bold text-slate-400 uppercase">Llegada: ${formatFecha(z.fechaLlegada)}</div>${badge}</div>
+                    <div class="grid grid-cols-2 gap-2 mt-1 pt-3 border-t border-slate-100">
+                        ${z.estado === 'Bodega' ? `<button onclick="openAsignarModal('${z.id}')" class="py-2 bg-emerald-600 text-white font-black rounded-lg text-[10px] uppercase col-span-2">Entregar</button><button onclick="openZapatoModal('${z.id}')" class="py-2 bg-slate-100 text-slate-600 font-black rounded-lg text-[10px] uppercase border border-slate-200">Editar</button><button onclick="mandarBodegaADevolucion('${z.id}')" class="py-2 bg-amber-50 text-amber-700 font-black rounded-lg text-[10px] uppercase border border-amber-200">Devolver</button>` : ''}
+                        ${z.estado === 'Devolución' ? `<button onclick="openZapatoModal('${z.id}')" class="py-2 bg-slate-100 text-slate-600 font-black rounded-lg text-[10px] uppercase border border-slate-200">Editar</button><button onclick="borrarZapato('${z.id}')" class="py-2 bg-rose-50 text-rose-700 font-black rounded-lg text-[10px] uppercase border border-rose-200">Eliminar</button>` : ''}
+                        ${z.estado === 'Asignado' ? `<div class="col-span-2 text-center text-[9px] font-bold text-slate-400 py-1">Para devoluciones, ir al Cliente</div>` : ''}
+                        ${z.estado === 'Devuelto a Tienda' ? `<button onclick="borrarZapato('${z.id}')" class="py-2 bg-rose-50 text-rose-700 font-black rounded-lg text-[10px] uppercase border border-rose-200 col-span-2">Borrar Historial</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function generarPDFBodega() {
+            const filterTienda = document.getElementById('filter-tienda-bodega').value;
+            const isTodasTienda = !filterTienda || filterTienda === 'Todas';
+            const zapatos = dbZapatos.filter(z => z.estado !== 'Pedido' && z.estado !== 'Devuelto a Tienda' && (isTodasTienda || z.tienda === filterTienda));
+            if(zapatos.length === 0) return alert("Vacío.");
+
+            let htmlContent = `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="text-align: center; color: #1e293b;">Inventario Físico ${!isTodasTienda ? '- ' + filterTienda : ''}</h2>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
+                        <tr style="background-color: #f1f5f9; text-align: left;">
+                            <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
+                            <th style="padding: 10px; border: 1px solid #e2e8f0;">Marca</th>
+                            <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo</th>
+                            <th style="padding: 10px; border: 1px solid #e2e8f0;">Talla / Color</th>
+                            <th style="padding: 10px; border: 1px solid #e2e8f0;">Estado</th>
+                        </tr>
+                        ${zapatos.map(z => `<tr>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0;">${z.modelo}</td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #e11d48; font-weight: bold;">${z.talla} <span style="font-weight:normal;">(${z.color})</span></td>
+                            <td style="padding: 8px; border: 1px solid #e2e8f0; color: #475569;">${z.estado === 'Asignado' ? 'Vendido' : z.estado === 'Bodega' && z.clienteId ? 'Apartado' : z.estado}</td>
+                        </tr>`).join('')}
+                    </table>
+                </div>`;
+            html2pdf().set({margin: 0.5, filename: `Inventario_${filterTienda}.pdf`}).from(document.createElement('div').insertAdjacentHTML('beforeend', htmlContent).parentNode).save();
+        }
+
+        // ================= ASIGNAR Y ABONAR =================
+        function openAsignarModal(idZapato) {
+            const z = dbZapatos.find(x => x.id === idZapato);
+            document.getElementById('a-zapato-id').value = z.id;
+            document.getElementById('a-zapato-info').innerHTML = `<span class="font-black text-slate-800 text-lg uppercase">${z.modelo}</span><br>Talla: <span class="text-rose-600 font-black">${z.talla}</span> | Color: <span class="font-black">${z.color}</span>`;
+            document.getElementById('a-cliente').innerHTML = '<option value="">-- CLIENTE --</option>' + dbClientes.sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+            if(z.clienteId) document.getElementById('a-cliente').value = z.clienteId;
+            document.getElementById('a-precio').value = ''; document.getElementById('modal-asignar').classList.remove('hidden');
+        }
+
+        function confirmarAsignacion() {
+            const idZ = document.getElementById('a-zapato-id').value; const idC = document.getElementById('a-cliente').value; const p = parseFloat(document.getElementById('a-precio').value);
+            if (!idC || isNaN(p) || p <= 0) return alert("Datos inválidos.");
+            const z = dbZapatos.find(x => x.id === idZ); z.estado = 'Asignado'; z.clienteId = idC; z.precioVenta = p; z.fechaAsignacion = (new Date(new Date() - (new Date().getTimezoneOffset() * 60000))).toISOString().split('T')[0];
+            localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); closeModal('modal-asignar');
+            renderClientes(); renderBodega(); if(!document.getElementById('view-pedidos').classList.contains('hidden')) renderPedidos();
+            if(!document.getElementById('modal-estado-cuenta').classList.contains('hidden')) openEstadoCuenta(idC);
+            syncToGithub(); // SUBIR A NUBE
+        }
+
+        function openVenderDesdeCliente() {
+            const idC = document.getElementById('modal-estado-cuenta').dataset.clienteId; document.getElementById('vc-cliente-id').value = idC;
+            const zaps = dbZapatos.filter(z => z.estado === 'Bodega' && (!z.clienteId || z.clienteId === idC)).sort((a,b)=>a.modelo.localeCompare(b.modelo));
+            document.getElementById('vc-zapato').innerHTML = zaps.length === 0 ? '<option value="">-- NO HAY DISPONIBLES --</option>' : '<option value="">-- SELECCIONA --</option>' + zaps.map(z => `<option value="${z.id}">${z.modelo} - Talla ${z.talla} - ${z.color}</option>`).join('');
+            document.getElementById('vc-precio').value = ''; document.getElementById('modal-vender-cliente').classList.remove('hidden');
+        }
+
+        function confirmarVentaDesdeCliente() {
+            const idC = document.getElementById('vc-cliente-id').value; const idZ = document.getElementById('vc-zapato').value; const p = parseFloat(document.getElementById('vc-precio').value);
+            if (!idZ || isNaN(p) || p <= 0) return alert("Datos inválidos.");
+            const z = dbZapatos.find(x => x.id === idZ); z.estado = 'Asignado'; z.clienteId = idC; z.precioVenta = p; z.fechaAsignacion = (new Date(new Date() - (new Date().getTimezoneOffset() * 60000))).toISOString().split('T')[0];
+            localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); closeModal('modal-vender-cliente'); renderClientes(); renderBodega(); openEstadoCuenta(idC);
+            syncToGithub(); // SUBIR A NUBE
+        }
+
+        function openAbonoModal(idC) {
+            const c = dbClientes.find(x => x.id === idC); document.getElementById('ab-cliente-id').value = c.id; document.getElementById('ab-cliente-nombre').innerText = c.nombre;
+            document.getElementById('ab-deuda-actual').innerText = "Resta: " + money(calcularDeuda(c)); document.getElementById('ab-monto').value = ''; document.getElementById('modal-abono').classList.remove('hidden');
+        }
+
+        function confirmarAbono() {
+            const idC = document.getElementById('ab-cliente-id').value; const m = parseFloat(document.getElementById('ab-monto').value); const f = document.getElementById('ab-fecha').value; const wa = document.getElementById('ab-whatsapp').checked;
+            if(isNaN(m) || m <= 0) return alert("Monto inválido.");
+            const c = dbClientes.find(x => x.id === idC); if(!c.abonos) c.abonos = []; c.abonos.push({ id: uuid(), fecha: f, monto: m });
+            localStorage.setItem('db_clientes', JSON.stringify(dbClientes)); closeModal('modal-abono'); renderClientes();
+            if(!document.getElementById('modal-estado-cuenta').classList.contains('hidden')) openEstadoCuenta(idC);
+            syncToGithub(); // SUBIR A NUBE
+            
+            if(wa) {
+                let tel = c.telefono ? c.telefono.replace(/\D/g,'') : ''; if(tel.length === 10) tel = '52' + tel; 
+                if(tel.length >= 12 && tel.startsWith('52')) window.open(`https://wa.me/${tel}?text=${encodeURIComponent(`Hola *${c.nombre}*, hemos recibido tu abono de *${money(m)}* el ${formatFecha(f)}.\n✅ Tu saldo es *${money(calcularDeuda(c))}*.\n¡Gracias! 👠👟`)}`, '_blank');
+                else alert("Guardado, pero el teléfono no es válido para WhatsApp.");
+            }
+        }
+        function abrirAbonoDesdeHistorial() { openAbonoModal(document.getElementById('modal-estado-cuenta').dataset.clienteId); }
+
+    </script>
+</body>
+</html>
