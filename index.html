@@ -514,7 +514,6 @@
                     </div>
                 </div>
 
-                <!-- NUEVO CAMPO: Alternativas/Opciones -->
                 <div id="div-z-alternativas" class="hidden">
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Opciones / Alternativas (Opcional)</label>
                     <input type="text" id="z-alternativas" placeholder="Ej. Si no hay, traer el modelo 543 en rojo..." class="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl font-bold focus:ring-2 focus:ring-amber-500 outline-none text-amber-900 placeholder-amber-400">
@@ -676,6 +675,7 @@
         // ======= ESTADO GLOBAL =======
         let dbZapatos = JSON.parse(localStorage.getItem('db_zapatos')) || [];
         let dbClientes = JSON.parse(localStorage.getItem('db_clientes')) || [];
+        let dbEliminados = JSON.parse(localStorage.getItem('db_eliminados')) || []; // <-- NUEVO: Trazador de eliminaciones
         let githubConfig = JSON.parse(localStorage.getItem('github_config')) || { token: '', user: '', repo: '', path: 'zapatos_mariana_backup.json' };
         
         let migrado = false;
@@ -855,43 +855,54 @@
             return await fetch(url, config);
         }
 
-        // --- ALGORITMO DE FUSIÓN (SMART MERGE) ---
+        // --- ALGORITMO DE FUSIÓN (SMART MERGE CON PAPELERA) ---
         function fusionarDatos(localData, remoteData) {
             if (!remoteData || (!remoteData.clientes && !remoteData.zapatos)) return localData;
+
+            // 0. Unificar Papelera de Reciclaje (Tombstones)
+            // Si tú borraste algo localmente, o si otro teléfono borró algo remotamente, se junta en una sola lista negra.
+            let eliminadosSet = new Set([
+                ...(localData.eliminados || []), 
+                ...(remoteData.eliminados || [])
+            ]);
 
             // 1. Fusionar Clientes y sus Abonos
             let clientesMap = new Map();
             
-            // Cargar los remotos al mapa
+            // Cargar los remotos (solo si NO están eliminados)
             if (remoteData.clientes) {
-                remoteData.clientes.forEach(c => clientesMap.set(c.id, c));
+                remoteData.clientes.forEach(c => {
+                    if(!eliminadosSet.has(c.id)) clientesMap.set(c.id, c);
+                });
             }
             
             // Integrar los locales de forma inteligente
             if (localData.clientes) {
                 localData.clientes.forEach(cLocal => {
+                    if(eliminadosSet.has(cLocal.id)) return; // Ignorar si fue eliminado intencionalmente
+
                     if (clientesMap.has(cLocal.id)) {
                         let cRemote = clientesMap.get(cLocal.id);
                         
-                        // Fusión de abonos: No perder ni los locales ni los remotos
                         let abonosMap = new Map();
-                        if (cRemote.abonos) cRemote.abonos.forEach(a => abonosMap.set(a.id, a));
+                        // Agregar abonos remotos (solo si no fueron borrados)
+                        if (cRemote.abonos) cRemote.abonos.forEach(a => {
+                            if(!eliminadosSet.has(a.id)) abonosMap.set(a.id, a);
+                        });
+                        
+                        // Agregar abonos locales (solo si no fueron borrados y no existen ya)
                         if (cLocal.abonos) {
                             cLocal.abonos.forEach(a => {
-                                // Si el abono local no existe en la nube, lo agregamos
-                                if (!abonosMap.has(a.id)) abonosMap.set(a.id, a);
+                                if (!eliminadosSet.has(a.id) && !abonosMap.has(a.id)) abonosMap.set(a.id, a);
                             });
                         }
-                        // Volver a convertirlos en lista y ordenarlos por fecha
                         cRemote.abonos = Array.from(abonosMap.values()).sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
                         
-                        // Si local tiene datos de contacto más llenos que remoto, conservamos los locales
                         if (!cRemote.direccion && cLocal.direccion) cRemote.direccion = cLocal.direccion;
                         if (!cRemote.telefono && cLocal.telefono) cRemote.telefono = cLocal.telefono;
                         
                         clientesMap.set(cLocal.id, cRemote);
                     } else {
-                        // El cliente fue creado localmente y no existe en remoto
                         clientesMap.set(cLocal.id, cLocal);
                     }
                 });
@@ -901,29 +912,28 @@
             let zapatosMap = new Map();
             
             if (remoteData.zapatos) {
-                remoteData.zapatos.forEach(z => zapatosMap.set(z.id, z));
+                remoteData.zapatos.forEach(z => {
+                    if(!eliminadosSet.has(z.id)) zapatosMap.set(z.id, z);
+                });
             }
             
             if (localData.zapatos) {
                 localData.zapatos.forEach(zLocal => {
+                    if(eliminadosSet.has(zLocal.id)) return; // Ignorar si fue eliminado intencionalmente
+
                     if (zapatosMap.has(zLocal.id)) {
                         let zRemote = zapatosMap.get(zLocal.id);
                         
-                        // Lógica de avance: Si localmente el zapato avanzó de estado (ej: de Bodega a Asignado),
-                        // y el remoto sigue atrasado, priorizamos el local.
                         const estadosAvanzados = ['Asignado', 'Devolución', 'Devuelto a Tienda'];
                         if (estadosAvanzados.includes(zLocal.estado) && !estadosAvanzados.includes(zRemote.estado)) {
                             zapatosMap.set(zLocal.id, zLocal);
                         } else if (zLocal.estado === 'Bodega' && zRemote.estado === 'Pedido') {
                             zapatosMap.set(zLocal.id, zLocal);
-                        }
-                        // Si tienen el mismo estado, confiamos en remoto, a menos que local tenga un precio o fecha reciente asignada
-                        else if (zLocal.estado === 'Asignado' && zRemote.estado === 'Asignado') {
+                        } else if (zLocal.estado === 'Asignado' && zRemote.estado === 'Asignado') {
                             if (!zRemote.fechaAsignacion && zLocal.fechaAsignacion) zapatosMap.set(zLocal.id, zLocal);
                         }
 
                     } else {
-                        // Zapato nuevo creado localmente
                         zapatosMap.set(zLocal.id, zLocal);
                     }
                 });
@@ -931,7 +941,8 @@
 
             return {
                 clientes: Array.from(clientesMap.values()),
-                zapatos: Array.from(zapatosMap.values())
+                zapatos: Array.from(zapatosMap.values()),
+                eliminados: Array.from(eliminadosSet) // Devolvemos la lista negra combinada
             };
         }
 
@@ -948,7 +959,6 @@
                 let sha = "";
                 let remoteData = null;
                 
-                // 1. Descargar remoto para fusionar primero
                 const getRes = await apiGithub('GET');
                 if (getRes.ok) {
                     const getData = await getRes.json();
@@ -957,19 +967,19 @@
                     remoteData = JSON.parse(contentStr);
                 }
                 
-                const localData = { clientes: dbClientes, zapatos: dbZapatos };
+                const localData = { clientes: dbClientes, zapatos: dbZapatos, eliminados: dbEliminados };
                 
-                // 2. Aplicar el Smart Merge (Fusión inteligente)
                 const mergedData = fusionarDatos(localData, remoteData);
                 
-                // 3. Actualizar la vista local para que el usuario vea los datos de su pareja inmediatamente
+                // Actualizar DB local
                 dbClientes = mergedData.clientes;
                 dbZapatos = mergedData.zapatos;
+                dbEliminados = mergedData.eliminados;
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
                 actualizarTodoYRenderizar();
 
-                // 4. Subir la versión combinada perfecta
                 const contentBase64 = utf8_to_b64(JSON.stringify(mergedData));
                 const putRes = await apiGithub('PUT', {
                     message: `Fusión Automática SmartSync: ${new Date().toLocaleString()}`,
@@ -1009,14 +1019,15 @@
                      const backupData = JSON.parse(contentStr);
 
                      if (backupData.clientes && backupData.zapatos) {
-                         const localData = { clientes: dbClientes, zapatos: dbZapatos };
-                         // Ahora Bajar Nube también usa Smart Merge para que no borres tus datos locales sin subir
+                         const localData = { clientes: dbClientes, zapatos: dbZapatos, eliminados: dbEliminados };
                          const mergedData = fusionarDatos(localData, backupData);
 
                          dbClientes = mergedData.clientes;
                          dbZapatos = mergedData.zapatos;
+                         dbEliminados = mergedData.eliminados;
                          localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                          localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                         localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
 
                          actualizarTodoYRenderizar(); 
 
@@ -1233,8 +1244,11 @@
                     return z; 
                 });
                 
+                dbEliminados.push(id); // Registrar eliminación para la nube
+
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
                 
                 closeModal('modal-cliente'); 
                 actualizarTodoYRenderizar();
@@ -1507,7 +1521,11 @@
             if(confirm("¿Eliminar este abono?\n\nLa deuda aumentará automáticamente al anular el pago.")) {
                 const cliente = dbClientes.find(c => c.id === idCliente);
                 cliente.abonos = cliente.abonos.filter(a => a.id !== idAbono);
+                
+                dbEliminados.push(idAbono); // Registrar eliminación para la nube
+
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+                localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
                 
                 actualizarTodoYRenderizar();
                 openEstadoCuenta(idCliente);
@@ -1944,7 +1962,10 @@
         function borrarZapato(id, vista = 'bodega') {
             if(confirm('¿Eliminar definitivamente este registro del sistema?')) {
                 dbZapatos = dbZapatos.filter(z => z.id !== id); 
+                dbEliminados.push(id); // Registrar eliminación para la nube
+
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
                 
                 actualizarTodoYRenderizar();
                 setTimeout(() => { syncToGithub(); }, 100);
@@ -2682,4 +2703,5 @@
     </script>
 </body>
 </html>
+
 
