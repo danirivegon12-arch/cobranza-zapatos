@@ -1,1 +1,1 @@
-{"clientes":[{"id":"mnhpsdwavfdb0zp2o0g","nombre":"JUAN","telefono":"+52","diaCobro":"Lunes","colonia":"CENTRO","direccion":"Colon","orden":0,"abonos":[]}],"zapatos":[]}
+{"clientes":[{"id":"mnhpsdwavfdb0zp2o0g","nombre":"JUAN","telefono":"+52","diaCobro":"Lunes","colonia":"CENTRO","direccion":"Colon","orden":0,"abonos":[]}],"zapatos":[{"id":"mnhpyukazzvzwrtyiz","modelo":"5645435636","talla":"16","tienda":"PRICE","marca":"NIKE","color":"ROJO","fechaLlegada":"2026-04-02","estado":"Bodega","clienteId":"mnhpsdwavfdb0zp2o0g","precioVenta":null,"fechaAsignacion":null}]}
