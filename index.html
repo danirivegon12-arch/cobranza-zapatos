@@ -43,7 +43,7 @@
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
-    <!-- Datalists globales (ESTO ES LO QUE FALTABA Y CONGELABA TU APP) -->
+    <!-- Datalists globales -->
     <datalist id="clientes-datalist"></datalist>
     <datalist id="tiendas-existentes"></datalist>
     <datalist id="colonias-existentes"></datalist>
@@ -1428,7 +1428,7 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Marca</th>
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Modelo</th>
@@ -1439,7 +1439,7 @@
                         </thead>
                         <tbody>
                             ${zaps.map(z => `
-                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${z.tienda}</td>
                                 <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
                                 <td style="padding: 8px; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.modelo}</td>
@@ -1461,14 +1461,14 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Fecha</th>
                                 <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Monto Pagado</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${abonos.map(a => `
-                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
                                 <td style="padding: 8px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">${money(a.monto)}</td>
                             </tr>`).join('')}
@@ -1614,7 +1614,7 @@
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
                         <thead>
-                            <tr style="background-color: #eff6ff; text-align: left; border-bottom: 2px solid #bfdbfe; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="background-color: #eff6ff; text-align: left; border-bottom: 2px solid #bfdbfe; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo / Marca</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Talla / Color</th>
@@ -1627,7 +1627,7 @@
                                 const pStr = z.precioAcordado ? `<span style="color:#059669; font-weight:bold;">${money(z.precioAcordado)}</span>` : '';
                                 const dStr = z.detalles ? `<br><span style="font-size:10px; color:#64748b; font-style:italic;">${z.detalles}</span>` : '';
                                 return `
-                                <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+                                <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                     <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong><br><span style="color: #475569; font-size:10px;">${z.marca || 'S/M'}</span></td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
@@ -1960,7 +1960,7 @@
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy} | Filtro: ${isTodosEstado ? 'Todos los Estados' : filterEstado}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left; border-bottom: 2px solid #cbd5e1; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="background-color: #f1f5f9; text-align: left; border-bottom: 2px solid #cbd5e1; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Marca</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo</th>
@@ -1976,7 +1976,7 @@
                                 else if(z.estado === 'Bodega' && z.clienteId) estadoStr = `Apartado: ${getClienteNombre(z.clienteId)}`;
                                 
                                 return `
-                                <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+                                <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                     <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${z.modelo}</td>
@@ -2379,7 +2379,7 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Fecha</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Cliente</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0; text-align: right;">Monto</th>
@@ -2387,7 +2387,7 @@
                         </thead>
                         <tbody>
                             ${listaAbonosMes.map(a => `
-                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <td style="padding: 6px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0; font-weight: bold;">${a.nombre}</td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">+ ${money(a.monto)}</td>
@@ -2406,7 +2406,7 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Fecha</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Modelo/Marca</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Entregado a</th>
@@ -2415,7 +2415,7 @@
                         </thead>
                         <tbody>
                             ${listaVentasMes.map(z => `
-                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                 <td style="padding: 6px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong> <span style="color:#64748b;">(${z.tienda})</span></td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0;">${getClienteNombre(z.clienteId)}</td>
