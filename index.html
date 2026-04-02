@@ -1318,7 +1318,7 @@
                     }
 
                     return `
-                    <div class="bg-slate-50 border ${pagoEstaSemana ? 'border-emerald-400 bg-emerald-50/40 shadow-emerald-100/50' : 'border-slate-200'} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative shadow-sm hover:shadow-md transition-shadow">
+                    <div class="bg-slate-50 border ${pagoEstaSemana ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'border-slate-200'} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow">
                         <div class="flex gap-3 min-w-[200px]">
                             <div class="flex flex-col gap-1 w-7 justify-center flex-shrink-0">
                                 <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border ${pagoEstaSemana ? 'border-emerald-200' : 'border-slate-200'} hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
@@ -1326,16 +1326,12 @@
                             </div>
                             <div class="flex flex-col justify-center">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre}</p>
-                                    ${pagoEstaSemana ? `
-                                    <div class="flex items-center gap-1.5 bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-md shadow-sm" title="Ya dio abono esta semana">
-                                        <span class="relative flex h-2.5 w-2.5">
-                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                                        </span>
-                                        <span class="text-[10px] font-black text-emerald-800 uppercase tracking-wider">Abonó</span>
-                                    </div>` : ''}
+                                    <p class="font-black text-slate-800 text-lg uppercase leading-tight">${c.nombre} ${pagoEstaSemana ? '<span style="font-size: 1.1rem; filter: drop-shadow(0 0 2px rgba(16,185,129,0.8));" title="Ya pagó">✅</span>' : ''}</p>
                                 </div>
+                                ${pagoEstaSemana ? `<div style="display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; padding: 3px 8px; background-color: #10b981 !important; border-radius: 10px; width: fit-content; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); border: 1px solid #059669;">
+                                    <span style="display: block; width: 8px; height: 8px; background-color: #ffffff; border-radius: 50%; box-shadow: 0 0 5px #fff;" class="animate-pulse"></span>
+                                    <span style="color: #ffffff !important; font-size: 10px; font-weight: 900; letter-spacing: 1px;">ABONÓ ESTA SEMANA</span>
+                                </div>` : ''}
                                 <div class="mt-1 space-y-0.5">
                                     <p class="text-[10px] font-bold text-slate-500">📞 ${c.telefono || 'S/N'}</p>
                                     <p class="text-[10px] font-bold text-slate-500">📍 ${c.colonia} • ${c.direccion ? c.direccion : 'Sin calle'}</p>
