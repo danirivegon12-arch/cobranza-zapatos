@@ -652,17 +652,37 @@
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
         }
 
+        // ==========================================
+        // ======= NUEVA FUNCIÓN DE RENDIMIENTO =======
+        // ==========================================
+        function actualizarTodoYRenderizar() {
+            try {
+                // Actualizar Filtros y Listas desplegables
+                actualizarDatalistClientes(); 
+                actualizarFiltrosClientes();
+                actualizarFiltrosBodega();
+                actualizarFiltrosPedidos();
+                generarSelectorMesesContaduria();
+
+                // Recargar las vistas de forma segura
+                renderClientes();
+                renderPedidos();
+                renderBodega();
+                renderContaduria();
+            } catch (error) {
+                console.error("Hubo un ligero retraso al actualizar la vista:", error);
+            }
+        }
+
         // ======= INICIALIZACION =======
         window.onload = () => {
             updateOnlineStatus(); 
             document.getElementById('z-fecha').valueAsDate = new Date();
             document.getElementById('ab-fecha').valueAsDate = new Date();
             inicializarListaTallas(); 
-            actualizarDatalistClientes(); 
-            actualizarFiltrosClientes();
-            actualizarFiltrosBodega();
-            actualizarFiltrosPedidos();
-            generarSelectorMesesContaduria(); // Inicializa selector histórico
+            
+            actualizarTodoYRenderizar(); // USO DE LA NUEVA FUNCION
+            
             switchMainView('clientes'); 
             
             if(localStorage.getItem('pending_sync') === 'true') {
@@ -846,16 +866,7 @@
                          localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                          localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
 
-                         actualizarDatalistClientes(); 
-                         actualizarFiltrosClientes(); 
-                         actualizarFiltrosBodega(); 
-                         actualizarFiltrosPedidos();
-                         generarSelectorMesesContaduria();
-
-                         if(!document.getElementById('view-clientes').classList.contains('hidden')) renderClientes();
-                         if(!document.getElementById('view-pedidos').classList.contains('hidden')) renderPedidos();
-                         if(!document.getElementById('view-bodega').classList.contains('hidden')) renderBodega();
-                         if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
+                         actualizarTodoYRenderizar(); // USO DE LA NUEVA FUNCION
 
                          if(!isAuto) {
                              document.getElementById('sync-toast-icon').innerText = '✅';
@@ -1033,12 +1044,9 @@
             }
 
             localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
-            actualizarDatalistClientes(); 
-            actualizarFiltrosClientes();
-            renderClientes();
-            if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
             
-            closeModal('modal-cliente');
+            closeModal('modal-cliente'); // <-- CERRAR DE INMEDIATO
+            actualizarTodoYRenderizar();
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
@@ -1061,12 +1069,8 @@
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
                 
-                actualizarDatalistClientes(); 
-                actualizarFiltrosClientes();
-                renderClientes();
-                if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
-                
-                closeModal('modal-cliente');
+                closeModal('modal-cliente'); // <-- CERRAR DE INMEDIATO
+                actualizarTodoYRenderizar();
                 setTimeout(() => { syncToGithub(); }, 100);
             }
         }
@@ -1091,7 +1095,7 @@
                 groupClients[idx+1].orden = temp;
             }
             localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
-            renderClientes();
+            actualizarTodoYRenderizar();
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
@@ -1316,9 +1320,9 @@
                 const cliente = dbClientes.find(c => c.id === idCliente);
                 cliente.abonos = cliente.abonos.filter(a => a.id !== idAbono);
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
-                renderClientes(); 
+                
+                actualizarTodoYRenderizar();
                 openEstadoCuenta(idCliente);
-                if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
                 setTimeout(() => { syncToGithub(); }, 100);
             }
         }
@@ -1333,10 +1337,9 @@
                 z.precioVenta = null; 
                 z.fechaAsignacion = null; 
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
-                renderClientes(); 
-                renderBodega(); 
+                
+                actualizarTodoYRenderizar();
                 openEstadoCuenta(idCliente); 
-                if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
                 setTimeout(() => { syncToGithub(); }, 100);
             }
         }
@@ -1454,9 +1457,8 @@
                 z.estado = 'Bodega';
                 z.fechaLlegada = fmtLocal(new Date());
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
-                actualizarFiltrosPedidos(); 
-                renderPedidos();
-                renderBodega();
+                
+                actualizarTodoYRenderizar();
                 setTimeout(() => { syncToGithub(); }, 100);
             }
         }
@@ -1588,14 +1590,8 @@
 
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
             
-            actualizarFiltrosBodega(); 
-            actualizarFiltrosPedidos(); 
-            renderPedidos();
-            renderBodega();
-            renderClientes();
-            if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
-            
-            closeModal('modal-zapato');
+            closeModal('modal-zapato'); // <-- CERRAR DE INMEDIATO
+            actualizarTodoYRenderizar();
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
@@ -1604,12 +1600,7 @@
                 dbZapatos = dbZapatos.filter(z => z.id !== id); 
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
                 
-                actualizarFiltrosBodega(); 
-                actualizarFiltrosPedidos();
-                renderPedidos();
-                renderBodega();
-                if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
-                
+                actualizarTodoYRenderizar();
                 setTimeout(() => { syncToGithub(); }, 100);
             }
         }
@@ -1620,7 +1611,8 @@
                 z.estado = 'Devolución'; 
                 z.clienteId = null; 
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
-                renderBodega(); 
+                
+                actualizarTodoYRenderizar();
                 setTimeout(() => { syncToGithub(); }, 100);
             }
         }
@@ -1792,15 +1784,15 @@
             
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
             
-            renderClientes(); 
-            renderBodega(); 
-            renderPedidos();
-            if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
+            closeModal('modal-asignar'); // <-- CERRAR DE INMEDIATO
+            actualizarTodoYRenderizar();
 
-            if(existingClient && !document.getElementById('modal-estado-cuenta').classList.contains('hidden')) openEstadoCuenta(idC);
-            else closeModal('modal-estado-cuenta');
+            if(existingClient && !document.getElementById('modal-estado-cuenta').classList.contains('hidden')) {
+                openEstadoCuenta(idC);
+            } else {
+                closeModal('modal-estado-cuenta');
+            }
             
-            closeModal('modal-asignar');
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
@@ -1833,12 +1825,10 @@
             
             localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos)); 
             
-            renderClientes(); 
-            renderBodega(); 
+            closeModal('modal-vender-cliente'); // <-- CERRAR DE INMEDIATO
+            actualizarTodoYRenderizar();
             openEstadoCuenta(idC);
-            if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
             
-            closeModal('modal-vender-cliente'); 
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
@@ -1865,11 +1855,13 @@
             
             localStorage.setItem('db_clientes', JSON.stringify(dbClientes)); 
             
-            renderClientes();
-            if(!document.getElementById('modal-estado-cuenta').classList.contains('hidden')) openEstadoCuenta(idC);
-            if(!document.getElementById('view-contaduria').classList.contains('hidden')) renderContaduria();
+            closeModal('modal-abono'); // <-- CERRAR DE INMEDIATO
+            actualizarTodoYRenderizar();
+
+            if(!document.getElementById('modal-estado-cuenta').classList.contains('hidden')) {
+                openEstadoCuenta(idC);
+            }
             
-            closeModal('modal-abono'); 
             setTimeout(() => { syncToGithub(); }, 100);
             
             if(wa) {
@@ -1890,14 +1882,19 @@
         }
 
         // ========================================================
-        // ================= CONTADURÍA (NUEVO) ===================
+        // ================= CONTADURÍA (ACTUALIZADA) =================
         // ========================================================
 
         function getRangoSemanaActual() {
             const now = new Date();
-            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
-            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
-            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - dayOfWeek));
+            const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // 1(Lunes) a 7(Domingo)
+            
+            // Calculado de forma segura para no romper meses
+            const start = new Date(now);
+            start.setDate(now.getDate() - dayOfWeek + 1);
+            const end = new Date(now);
+            end.setDate(now.getDate() + (7 - dayOfWeek));
+            
             return { start: fmtLocal(start), end: fmtLocal(end) };
         }
 
@@ -1923,8 +1920,17 @@
 
         function generarSelectorMesesContaduria() {
             const selector = document.getElementById('select-mes-contaduria');
+            const valorActual = selector.value; // Guardar el valor antes de sobrescribir
+            
             const meses = obtenerMesesDisponibles();
             selector.innerHTML = meses.map(m => `<option value="${m}">${formatearMes(m)}</option>`).join('');
+            
+            // Restaurar el mes que el usuario estaba viendo
+            if (valorActual && meses.includes(valorActual)) {
+                selector.value = valorActual;
+            } else if (meses.length > 0) {
+                selector.value = meses[0];
+            }
         }
 
         function renderContaduria() {
