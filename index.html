@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Bloqueo de Modo Oscuro destructivo -->
+    <!-- Bloqueo de Modo Oscuro destructivo en Xiaomi/Poco -->
     <meta name="color-scheme" content="light only">
     <title>Zapatos Mariana - Cobranza e Inventario</title>
     <!-- Tailwind CSS -->
@@ -15,12 +15,13 @@
         :root { color-scheme: light; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
         
-        /* Forzar colores en inputs/selects para evadir bugs de Xiaomi/Dark Mode */
+        /* Forzar colores en inputs/selects para evadir bugs de Dark Mode */
         select, option { background-color: #ffffff !important; color: #0f172a !important; }
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .alerta-critica { animation: pulse-red 2s infinite; }
+        
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
             70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
@@ -41,7 +42,12 @@
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4 w-full md:w-auto justify-center md:justify-start relative">
                 <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
                 </div>
                 <div class="text-center md:text-left">
                     <h1 class="text-2xl font-black tracking-tight leading-none uppercase text-indigo-100">ZAPATOS MARIANA</h1>
@@ -50,7 +56,9 @@
                 
                 <!-- BOTÓN CONFIGURACIÓN GITHUB CON INDICADOR OFFLINE -->
                 <button id="btn-nube" onclick="openGithubModal()" class="absolute right-0 md:-right-12 bg-slate-800 p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors relative" title="Configurar Nube GitHub">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+                    </svg>
                     <!-- Puntito rojo para cambios pendientes sin internet -->
                     <span id="indicador-sync" class="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full hidden border-2 border-slate-900"></span>
                 </button>
@@ -574,13 +582,13 @@
                 }
             }
 
-            // Cada 30 minutos actualizamos (solo si hay internet)
+            // Cada 30 minutos actualizamos (solo si hay internet y no hay cambios atorados)
             setInterval(() => {
                 if(navigator.onLine && githubConfig.token) {
                     if (localStorage.getItem('pending_sync') === 'true') {
-                        syncToGithub(); // Primero subimos lo nuestro
+                        syncToGithub(); 
                     } else {
-                        syncFromGithub(true); // O bajamos si estamos al día
+                        syncFromGithub(true); 
                     }
                 }
             }, 1800000); 
@@ -589,7 +597,7 @@
         // Escuchar cuando el celular recupera el WiFi o los Datos
         window.addEventListener('online', () => {
             if(localStorage.getItem('pending_sync') === 'true') {
-                syncToGithub(); // Subir automáticamente al recuperar señal
+                syncToGithub(); 
             }
         });
 
@@ -603,14 +611,22 @@
         }
 
         function saveGithubConfig() {
+            let repoVal = document.getElementById('gh-repo').value.trim();
+            // Correccion Inteligente: Si el usuario pone "usuario/repositorio", le quitamos el usuario
+            if(repoVal.includes('/')) {
+                repoVal = repoVal.split('/').pop();
+            }
+
             githubConfig = {
                 token: document.getElementById('gh-token').value.trim(),
                 user: document.getElementById('gh-user').value.trim(),
-                repo: document.getElementById('gh-repo').value.trim(),
+                repo: repoVal,
                 path: 'zapatos_mariana_backup.json'
             };
+            
             localStorage.setItem('github_config', JSON.stringify(githubConfig));
             closeModal('modal-github');
+            
             if(githubConfig.token) {
                 syncToGithub(); 
             }
@@ -643,6 +659,20 @@
 
         function ocultarNotificacionSync() {
             document.getElementById('sync-toast').classList.add('translate-y-20', 'opacity-0');
+        }
+
+        // Codificador Base64 a prueba de errores para caracteres especiales
+        function utf8_to_b64(str) {
+            return window.btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                return String.fromCharCode('0x' + p1);
+            }));
+        }
+
+        // Decodificador Base64 a prueba de errores para caracteres especiales
+        function b64_to_utf8(str) {
+            return decodeURIComponent(window.atob(str).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
         }
 
         async function apiGithub(method, body = null) {
@@ -681,8 +711,9 @@
                 }
 
                 const backupData = { clientes: dbClientes, zapatos: dbZapatos };
-                // Codificación segura para caracteres en español (acentos, ñ)
-                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(backupData))));
+                
+                // Usamos el codificador seguro
+                const contentBase64 = utf8_to_b64(JSON.stringify(backupData));
                 
                 const putRes = await apiGithub('PUT', {
                     message: `Auto-Respaldo App Zapatos: ${new Date().toLocaleString()}`,
@@ -698,21 +729,22 @@
                     setTimeout(ocultarNotificacionSync, 2000);
                 } else {
                     marcarSyncPendiente(true); 
-                    mostrarNotificacionSync("Fallo la subida (Reintentará luego)", true);
+                    mostrarNotificacionSync("Revisa el Nombre del Repositorio", true);
                     setTimeout(ocultarNotificacionSync, 4000);
                 }
             } catch (e) {
-                console.error(e);
+                console.error("Error GitHub:", e);
                 marcarSyncPendiente(true);
-                mostrarNotificacionSync("Sin Internet para subir", true);
-                setTimeout(ocultarNotificacionSync, 4000);
+                mostrarNotificacionSync("Error al conectar: " + e.message, true);
+                setTimeout(ocultarNotificacionSync, 5000);
             }
         }
 
         async function syncFromGithub(isAuto = false) {
              if (!githubConfig.token || !githubConfig.repo) return;
              if (!navigator.onLine && !isAuto) {
-                 return alert("No tienes internet para descargar la copia de seguridad.");
+                 alert("No tienes internet para descargar la copia de seguridad.");
+                 return;
              }
              if (!navigator.onLine && isAuto) return;
 
@@ -721,7 +753,9 @@
                  const getRes = await apiGithub('GET');
                  if (getRes.ok) {
                      const getData = await getRes.json();
-                     const contentStr = decodeURIComponent(escape(atob(getData.content)));
+                     
+                     // Usamos el decodificador seguro
+                     const contentStr = b64_to_utf8(getData.content);
                      const backupData = JSON.parse(contentStr);
 
                      if (backupData.clientes && backupData.zapatos) {
@@ -755,14 +789,14 @@
                      mostrarNotificacionSync("Primera vez, creando archivo...");
                      await syncToGithub();
                  } else if (!isAuto) {
-                     mostrarNotificacionSync("Error al descargar", true);
+                     mostrarNotificacionSync("Revisa Token y Repositorio", true);
                      setTimeout(ocultarNotificacionSync, 4000);
                  }
              } catch (e) {
-                 console.error(e);
+                 console.error("Error GitHub:", e);
                  if(!isAuto) {
-                     mostrarNotificacionSync("Sin Internet para descargar", true);
-                     setTimeout(ocultarNotificacionSync, 4000);
+                     mostrarNotificacionSync("Error al descargar: " + e.message, true);
+                     setTimeout(ocultarNotificacionSync, 5000);
                  }
              }
         }
@@ -1028,7 +1062,10 @@
                     
                     let alertPendientes = '';
                     if(zapsPendientes.length > 0) {
-                        alertPendientes = `<span class="bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-full border border-blue-200 ml-1">${zapsPendientes.length} por entregar</span>`;
+                        alertPendientes = `
+                        <span class="bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-full border border-blue-200 ml-1">
+                            ${zapsPendientes.length} por entregar
+                        </span>`;
                     }
 
                     return `
@@ -1051,7 +1088,13 @@
 
                         <div class="flex flex-col flex-grow justify-center md:max-w-[200px] gap-2">
                              <button onclick="openEstadoCuenta('${c.id}')" class="w-full py-3 bg-white border-2 border-indigo-100 hover:border-indigo-400 text-indigo-700 font-black rounded-xl text-[10px] uppercase shadow-sm transition-all flex flex-col items-center justify-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10 9 9 9 8 9"/>
+                                </svg>
                                 Ver Estado de Cuenta
                                 <div class="flex flex-wrap justify-center items-center gap-1 mt-1">
                                     <span class="text-[8px] font-bold text-slate-400">${zapsAsignados.length} activos</span>
@@ -1074,7 +1117,9 @@
                 <div class="bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm">
                     <div class="flex justify-between items-end border-b border-slate-100 pb-3 mb-4">
                         <h3 class="text-xl font-black text-slate-800 uppercase flex items-center gap-2">
-                            <svg class="text-indigo-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 
+                            <svg class="text-indigo-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg> 
                             ${agruparPor === 'diaCobro' ? 'Ruta' : 'Zona'}: ${grupoVal}
                         </h3>
                         <div class="text-right">
@@ -1669,7 +1714,7 @@
                     return false;
                 }
                 
-                const clienteStr = z.clienteId ? getClienteNombre(z.clienteId) : '';
+                const clienteStr = z.clienteId ? getClienteNombre(z.clienteId).toLowerCase() : '';
                 const txt = `${z.modelo} ${z.marca} ${z.tienda} ${z.talla} ${z.color} ${z.fechaLlegada} ${clienteStr}`.toLowerCase();
                 
                 let matchEstado = false;
