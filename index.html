@@ -43,7 +43,7 @@
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
-    <!-- Datalists globales -->
+    <!-- Datalists globales (ESTO ES LO QUE FALTABA Y CONGELABA TU APP) -->
     <datalist id="clientes-datalist"></datalist>
     <datalist id="tiendas-existentes"></datalist>
     <datalist id="colonias-existentes"></datalist>
@@ -1428,7 +1428,7 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Marca</th>
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Modelo</th>
@@ -1439,8 +1439,7 @@
                         </thead>
                         <tbody>
                             ${zaps.map(z => `
-                            <!-- Se quitó page-break-inside: avoid para evitar bug de html2pdf -->
-                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
                                 <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${z.tienda}</td>
                                 <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
                                 <td style="padding: 8px; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.modelo}</td>
@@ -1462,14 +1461,14 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
                                 <th style="padding: 8px; border: 1px solid #e2e8f0;">Fecha</th>
                                 <th style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">Monto Pagado</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${abonos.map(a => `
-                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
                                 <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
                                 <td style="padding: 8px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">${money(a.monto)}</td>
                             </tr>`).join('')}
@@ -1491,7 +1490,7 @@
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
         }
 
@@ -1610,12 +1609,12 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 980px; min-width: 980px; max-width: 980px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; min-width: 1040px; max-width: 1040px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <h2 style="text-align: center; color: #1e3a8a; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
                         <thead>
-                            <tr style="background-color: #eff6ff; text-align: left; border-bottom: 2px solid #bfdbfe;">
+                            <tr style="background-color: #eff6ff; text-align: left; border-bottom: 2px solid #bfdbfe; page-break-inside: avoid; break-inside: avoid;">
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo / Marca</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Talla / Color</th>
@@ -1628,7 +1627,7 @@
                                 const pStr = z.precioAcordado ? `<span style="color:#059669; font-weight:bold;">${money(z.precioAcordado)}</span>` : '';
                                 const dStr = z.detalles ? `<br><span style="font-size:10px; color:#64748b; font-style:italic;">${z.detalles}</span>` : '';
                                 return `
-                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
                                     <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong><br><span style="color: #475569; font-size:10px;">${z.marca || 'S/M'}</span></td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
@@ -1644,9 +1643,9 @@
                 margin: 0.5, 
                 filename: `Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 980, width: 980, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, width: 1040, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
         }
 
@@ -1956,12 +1955,12 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 980px; min-width: 980px; max-width: 980px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; min-width: 1040px; max-width: 1040px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <h2 style="text-align: center; color: #1e293b; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy} | Filtro: ${isTodosEstado ? 'Todos los Estados' : filterEstado}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left; border-bottom: 2px solid #cbd5e1;">
+                            <tr style="background-color: #f1f5f9; text-align: left; border-bottom: 2px solid #cbd5e1; page-break-inside: avoid; break-inside: avoid;">
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Marca</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo</th>
@@ -1977,7 +1976,7 @@
                                 else if(z.estado === 'Bodega' && z.clienteId) estadoStr = `Apartado: ${getClienteNombre(z.clienteId)}`;
                                 
                                 return `
-                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
                                     <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.marca || 'S/M'}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${z.modelo}</td>
@@ -1994,9 +1993,9 @@
                 margin: 0.5, 
                 filename: `Inventario_${isTodasTienda?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 980, width: 980, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, width: 1040, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
         }
 
@@ -2380,7 +2379,7 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Fecha</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Cliente</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0; text-align: right;">Monto</th>
@@ -2388,7 +2387,7 @@
                         </thead>
                         <tbody>
                             ${listaAbonosMes.map(a => `
-                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
                                 <td style="padding: 6px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(a.fecha)}</td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0; font-weight: bold;">${a.nombre}</td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0; text-align: right; color: #10b981; font-weight: bold;">+ ${money(a.monto)}</td>
@@ -2407,7 +2406,7 @@
                 htmlContent += `
                     <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                         <thead>
-                            <tr style="background-color: #f1f5f9; text-align: left;">
+                            <tr style="background-color: #f1f5f9; text-align: left; page-break-inside: avoid; break-inside: avoid;">
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Fecha</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Modelo/Marca</th>
                                 <th style="padding: 6px; border: 1px solid #e2e8f0;">Entregado a</th>
@@ -2416,7 +2415,7 @@
                         </thead>
                         <tbody>
                             ${listaVentasMes.map(z => `
-                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
                                 <td style="padding: 6px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">${formatFecha(z.fechaAsignacion)}</td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong> <span style="color:#64748b;">(${z.tienda})</span></td>
                                 <td style="padding: 6px; border-right: 1px solid #e2e8f0;">${getClienteNombre(z.clienteId)}</td>
@@ -2436,7 +2435,7 @@
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
         }
 
