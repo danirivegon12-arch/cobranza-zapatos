@@ -513,6 +513,12 @@
                         <input type="date" id="z-fecha" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-rose-500 outline-none">
                     </div>
                 </div>
+
+                <!-- NUEVO CAMPO: Alternativas/Opciones -->
+                <div id="div-z-alternativas" class="hidden">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Opciones / Alternativas (Opcional)</label>
+                    <input type="text" id="z-alternativas" placeholder="Ej. Si no hay, traer el modelo 543 en rojo..." class="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl font-bold focus:ring-2 focus:ring-amber-500 outline-none text-amber-900 placeholder-amber-400">
+                </div>
                 
                 <div class="pt-4 flex gap-3">
                     <button type="button" onclick="closeModal('modal-zapato')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
@@ -1540,7 +1546,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a; width: 800px; min-width: 800px; max-width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a; width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
                         <h1 style="color: #1e293b; margin: 0; font-size: 26px; text-transform: uppercase; font-weight: 900;">Zapatos Mariana</h1>
                         <h2 style="color: #475569; margin: 5px 0; font-size: 16px; font-weight: 600;">Estado de Cuenta Detallado</h2>
@@ -1633,7 +1639,7 @@
                 margin: 0.5, 
                 filename: `EstadoCuenta_${cliente.nombre.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
@@ -1690,6 +1696,7 @@
                 const destinatario = z.clienteId ? getClienteNombre(z.clienteId) : 'Libre (Sin Asignar)';
                 const precioBadge = z.precioAcordado ? `<p class="text-xs font-black text-emerald-600 mt-1">Precio: ${money(z.precioAcordado)}</p>` : '';
                 const detallesBadge = z.detalles ? `<p class="text-[10px] font-bold text-slate-500 mt-1 italic leading-tight">Nota: ${z.detalles}</p>` : '';
+                const altBadge = z.alternativas ? `<div class="bg-amber-50 border border-amber-100 p-2 rounded-lg mt-1 shadow-inner"><p class="text-[9px] font-black text-amber-600 uppercase">Alternativas:</p><p class="text-[10px] font-bold text-amber-800 italic leading-tight">${z.alternativas}</p></div>` : '';
 
                 return `
                 <div class="bg-white rounded-2xl p-4 border border-blue-200 shadow-sm relative flex flex-col gap-3 hover:shadow-md transition-shadow">
@@ -1700,6 +1707,7 @@
                         <p class="text-xs font-bold text-slate-500 mt-0.5">Color: <span class="text-slate-800 uppercase">${z.color}</span></p>
                         ${precioBadge}
                         ${detallesBadge}
+                        ${altBadge}
                     </div>
                     <div class="bg-blue-50 border border-blue-100 p-2 rounded-lg mt-1">
                         <p class="text-[9px] font-black text-blue-400 uppercase">Para el cliente:</p>
@@ -1754,7 +1762,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; min-width: 1040px; max-width: 1040px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <h2 style="text-align: center; color: #1e3a8a; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
@@ -1763,20 +1771,21 @@
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Tienda</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Modelo / Marca</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Talla / Color</th>
-                                <th style="padding: 10px; border: 1px solid #e2e8f0;">Detalles / Precio</th>
+                                <th style="padding: 10px; border: 1px solid #e2e8f0;">Detalles / Precio / Opciones</th>
                                 <th style="padding: 10px; border: 1px solid #e2e8f0;">Para Cliente</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${pedidos.map(z => {
                                 const pStr = z.precioAcordado ? `<span style="color:#059669; font-weight:bold;">${money(z.precioAcordado)}</span>` : '';
-                                const dStr = z.detalles ? `<br><span style="font-size:10px; color:#64748b; font-style:italic;">${z.detalles}</span>` : '';
+                                const dStr = z.detalles ? `<br><span style="font-size:10px; color:#64748b; font-style:italic;">Nota: ${z.detalles}</span>` : '';
+                                const aStr = z.alternativas ? `<br><span style="font-size:10px; color:#d97706; font-style:italic; font-weight:bold;">Alt: ${z.alternativas}</span>` : '';
                                 return `
                                 <tr style="border-bottom: 1px solid #e2e8f0; page-break-inside: avoid !important; break-inside: avoid !important;">
                                     <td style="padding: 8px; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; font-weight: bold;">${z.tienda}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0;"><strong>${z.modelo}</strong><br><span style="color: #475569; font-size:10px;">${z.marca || 'S/M'}</span></td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #2563eb; font-weight: bold;">${z.talla} <span style="font-weight:normal; color:#64748b;">(${z.color})</span></td>
-                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${pStr}${dStr}</td>
+                                    <td style="padding: 8px; border-right: 1px solid #e2e8f0;">${pStr}${dStr}${aStr}</td>
                                     <td style="padding: 8px; border-right: 1px solid #e2e8f0; color: #475569;">${z.clienteId ? getClienteNombre(z.clienteId) : 'Libre'}</td>
                                 </tr>`;
                             }).join('')}
@@ -1788,7 +1797,7 @@
                 margin: 0.5, 
                 filename: `Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, width: 1040, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
@@ -1822,10 +1831,13 @@
         function toggleFechaModal() {
             const estado = document.getElementById('z-estado').value;
             const lblFecha = document.getElementById('lbl-z-fecha');
+            const divAlternativas = document.getElementById('div-z-alternativas');
             if(estado === 'Pedido') {
                 lblFecha.innerText = 'Fecha de Encargo';
+                if(divAlternativas) divAlternativas.classList.remove('hidden');
             } else {
                 lblFecha.innerText = 'Fecha Llegada Física';
+                if(divAlternativas) divAlternativas.classList.add('hidden');
             }
         }
 
@@ -1845,6 +1857,7 @@
                 document.getElementById('z-estado').value = z.estado; 
                 document.getElementById('z-precio-acordado').value = z.precioAcordado || '';
                 document.getElementById('z-detalles').value = z.detalles || '';
+                document.getElementById('z-alternativas').value = z.alternativas || '';
                 
                 if (z.clienteId) {
                     const c = dbClientes.find(x => x.id === z.clienteId);
@@ -1864,6 +1877,7 @@
                 document.getElementById('z-destinatario').value = '';
                 document.getElementById('z-precio-acordado').value = '';
                 document.getElementById('z-detalles').value = '';
+                document.getElementById('z-alternativas').value = '';
                 selectTalla.value = ""; 
                 if(forceEstado) document.getElementById('z-estado').value = forceEstado;
             }
@@ -1901,7 +1915,8 @@
                 precioVenta: null, 
                 fechaAsignacion: null,
                 precioAcordado: isNaN(pAcordado) ? null : pAcordado,
-                detalles: document.getElementById('z-detalles').value.trim()
+                detalles: document.getElementById('z-detalles').value.trim(),
+                alternativas: document.getElementById('z-alternativas').value.trim()
             };
 
             if (id) {
@@ -2100,7 +2115,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; min-width: 1040px; max-width: 1040px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <h2 style="text-align: center; color: #1e293b; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy} | Filtro: ${isTodosEstado ? 'Todos los Estados' : filterEstado}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
@@ -2138,7 +2153,7 @@
                 margin: 0.5, 
                 filename: `Inventario_${isTodasTienda?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, width: 1040, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
@@ -2497,7 +2512,7 @@
             listaAbonosDia.sort((a,b) => a.nombre.localeCompare(b.nombre));
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; min-width: 800px; max-width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
                         <h1 style="color: #4f46e5; font-size: 22px; text-transform: uppercase; margin: 0; font-weight: 900;">Zapatos Mariana</h1>
                         <h2 style="color: #1e293b; font-size: 16px; margin: 5px 0; font-weight: bold;">Corte Diario de Abonos</h2>
@@ -2539,7 +2554,7 @@
                 margin: 0.5, 
                 filename: `Corte_Diario_${fechaInput}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
@@ -2579,7 +2594,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; min-width: 800px; max-width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; box-sizing: border-box; display: block; margin: 0; background-color: #ffffff;">
                     <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
                         <h1 style="color: #6b21a8; font-size: 22px; text-transform: uppercase; margin: 0;">Zapatos Mariana</h1>
                         <h2 style="color: #1e293b; font-size: 16px; margin: 5px 0;">Corte de Caja - ${nombreMes}</h2>
@@ -2658,7 +2673,7 @@
                 margin: 0.5, 
                 filename: `Corte_${nombreMes.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: 'css', avoid: 'tr' }
             }).from(htmlContent).save();
@@ -2667,5 +2682,4 @@
     </script>
 </body>
 </html>
-
 
