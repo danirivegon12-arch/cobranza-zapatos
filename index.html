@@ -43,7 +43,7 @@
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
-    <!-- Datalists globales (ESTO ES LO QUE FALTABA Y CONGELABA TU APP) -->
+    <!-- Datalists globales -->
     <datalist id="clientes-datalist"></datalist>
     <datalist id="tiendas-existentes"></datalist>
     <datalist id="colonias-existentes"></datalist>
@@ -190,6 +190,10 @@
         <div class="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
             <select id="filter-tienda-pedidos" onchange="renderPedidos()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full flex-grow"></select>
             
+            <select id="filter-cliente-pedidos" onchange="renderPedidos()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full flex-grow">
+                <option value="Todos">Todos los Clientes</option>
+            </select>
+            
             <button onclick="generarPDFPedidos()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-3 rounded-xl font-black text-[10px] shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors flex-shrink-0" title="Exportar lista de pedidos según la tienda seleccionada">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
                 PDF Pedidos
@@ -230,6 +234,10 @@
                 
                 <select id="filter-tienda-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto"></select>
                 
+                <select id="filter-cliente-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto">
+                    <option value="Todos">Todos los Clientes</option>
+                </select>
+
                 <select id="filter-bodega" onchange="renderBodega()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full sm:w-auto">
                     <option value="Todos">Todos los Estados</option>
                     <option value="Bodega">Solo Bodega</option>
@@ -449,6 +457,17 @@
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">¿Para quién es? (Opcional o Nota)</label>
                     <input type="text" id="z-destinatario" list="clientes-datalist" placeholder="Nombre real o descripción libre..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase focus:ring-2 focus:ring-rose-500 outline-none" autocomplete="off">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Precio Acordado ($)</label>
+                        <input type="number" id="z-precio-acordado" step="0.5" placeholder="0.00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Detalles / Notas</label>
+                        <input type="text" id="z-detalles" placeholder="Ej. Urgente, sin caja..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-rose-500 outline-none">
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -1376,7 +1395,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a; width: 800px; box-sizing: border-box;">
+                <div style="font-family: Arial, sans-serif; padding: 30px; color: #0f172a; width: 800px; min-width: 800px; max-width: 800px; box-sizing: border-box;">
                     <div style="text-align: center; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px;">
                         <h1 style="color: #1e293b; margin: 0; font-size: 26px; text-transform: uppercase; font-weight: 900;">Zapatos Mariana</h1>
                         <h2 style="color: #475569; margin: 5px 0; font-size: 16px; font-weight: 600;">Estado de Cuenta Detallado</h2>
@@ -1470,7 +1489,7 @@
                 margin: 0.5, 
                 filename: `EstadoCuenta_${cliente.nombre.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -1591,7 +1610,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; box-sizing: border-box;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; min-width: 1040px; max-width: 1040px; box-sizing: border-box;">
                     <h2 style="text-align: center; color: #1e3a8a; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px;">
@@ -1625,7 +1644,7 @@
                 margin: 0.5, 
                 filename: `Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, width: 1040, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -1937,7 +1956,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; box-sizing: border-box;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 1040px; min-width: 1040px; max-width: 1040px; box-sizing: border-box;">
                     <h2 style="text-align: center; color: #1e293b; text-transform: uppercase;">${tituloDoc}</h2>
                     <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 0;">Generado: ${fechaHoy} | Filtro: ${isTodosEstado ? 'Todos los Estados' : filterEstado}</p>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
@@ -1975,7 +1994,7 @@
                 margin: 0.5, 
                 filename: `Inventario_${isTodasTienda?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 1040, width: 1040, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
@@ -2336,7 +2355,7 @@
             const fechaHoy = new Date().toLocaleDateString('es-MX');
 
             let htmlContent = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; box-sizing: border-box;">
+                <div style="font-family: Arial, sans-serif; padding: 20px; width: 800px; min-width: 800px; max-width: 800px; box-sizing: border-box;">
                     <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
                         <h1 style="color: #6b21a8; font-size: 22px; text-transform: uppercase; margin: 0;">Zapatos Mariana</h1>
                         <h2 style="color: #1e293b; font-size: 16px; margin: 5px 0;">Corte de Caja - ${nombreMes}</h2>
@@ -2415,7 +2434,7 @@
                 margin: 0.5, 
                 filename: `Corte_${nombreMes.replace(/\s+/g, '_')}.pdf`, 
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, 
+                html2canvas: { scale: 2, useCORS: true, windowWidth: 800, width: 800, x: 0, y: 0, scrollX: 0, scrollY: 0 }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             }).from(htmlContent).save();
