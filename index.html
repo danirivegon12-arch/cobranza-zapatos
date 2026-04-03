@@ -14,6 +14,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
+    <!-- LIBRERÍA SORTABLE (Para arrastrar y ordenar en celular y PC) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap');
         
@@ -1265,33 +1268,6 @@
             }
         }
 
-        function moverCliente(id, direccion) {
-            const agruparPor = document.getElementById('agrupar-por').value;
-            const clienteToMove = dbClientes.find(c => c.id === id);
-            const groupKey = agruparPor === 'diaCobro' ? clienteToMove.diaCobro : clienteToMove.colonia;
-            
-            let groupClients = dbClientes.filter(c => (agruparPor === 'diaCobro' ? c.diaCobro : c.colonia) === groupKey);
-            groupClients.sort((a,b) => (a.orden || 0) - (b.orden || 0));
-            groupClients.forEach((c, i) => {
-                c.orden = i;
-                c.ultimaModificacion = Date.now();
-            });
-            
-            const idx = groupClients.findIndex(c => c.id === id);
-            if(direccion === -1 && idx > 0) { 
-                let temp = groupClients[idx].orden; 
-                groupClients[idx].orden = groupClients[idx-1].orden; 
-                groupClients[idx-1].orden = temp;
-            } else if (direccion === 1 && idx < groupClients.length - 1) {
-                let temp = groupClients[idx].orden; 
-                groupClients[idx].orden = groupClients[idx+1].orden; 
-                groupClients[idx+1].orden = temp;
-            }
-            localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
-            actualizarTodoYRenderizar();
-            setTimeout(() => { syncToGithub(); }, 100);
-        }
-
         function renderClientes() {
             const list = document.getElementById('lista-clientes');
             let deudaGlobal = 0;
@@ -1350,9 +1326,6 @@
                         borderCard = 'border-rose-400 shadow-[0_0_10px_rgba(225,29,72,0.2)]';
                     }
                     
-                    const hasUp = i > 0 && search === '';
-                    const hasDown = i < clientesEnGrupo.length - 1 && search === '';
-                    
                     const zapsAsignados = dbZapatos.filter(z => z.clienteId === c.id && z.estado === 'Asignado');
                     const zapsPendientes = dbZapatos.filter(z => z.clienteId === c.id && (z.estado === 'Pedido' || z.estado === 'Bodega'));
                     
@@ -1365,12 +1338,13 @@
                     }
 
                     return `
-                    <div class="bg-slate-50 border ${borderCard} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow">
+                    <div class="bg-slate-50 border ${borderCard} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow" data-id="${c.id}">
                         <div class="flex gap-3 min-w-[200px]">
-                            <div class="flex flex-col gap-1 w-7 justify-center flex-shrink-0">
-                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
-                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
+                            <!-- GRIP PARA DRAG AND DROP -->
+                            <div class="drag-handle flex flex-col justify-center items-center w-6 flex-shrink-0 text-slate-300 hover:text-indigo-500 cursor-grab active:cursor-grabbing transition-colors" title="Mantén presionado y arrastra para ordenar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
                             </div>
+
                             <div class="flex flex-col justify-center items-start gap-1">
                                 <p class="font-black text-lg uppercase leading-tight" style="color: #1e293b !important;">${c.nombre}</p>
                                 ${estadoCobroBadge}
@@ -1424,7 +1398,7 @@
                             <p class="text-sm font-black text-emerald-600">${money(totalGrupo)}</p>
                         </div>
                     </div>
-                    <div class="space-y-3">
+                    <div class="sortable-group space-y-3">
                         ${cardsHtml}
                     </div>
                 </div>`;
@@ -1432,6 +1406,34 @@
             
             document.getElementById('stat-deuda-global').innerText = money(deudaGlobal);
             list.innerHTML = html;
+
+            // ======== INICIALIZAR DRAG AND DROP ========
+            // Solo lo activamos si el usuario NO está usando la barra de búsqueda, para no arruinar el orden general
+            if (search === '' && typeof Sortable !== 'undefined') {
+                document.querySelectorAll('.sortable-group').forEach(el => {
+                    new Sortable(el, {
+                        handle: '.drag-handle', // Solo se arrastra desde los 6 puntitos
+                        animation: 200, // Suavidad de movimiento
+                        ghostClass: 'opacity-50', // Transparencia del clon que arrastras
+                        onEnd: function (evt) {
+                            // Cuando sueltas el cliente, se guarda el nuevo orden en el sistema
+                            const items = Array.from(evt.to.children);
+                            items.forEach((itemNode, i) => {
+                                const id = itemNode.dataset.id;
+                                const cliente = dbClientes.find(c => c.id === id);
+                                if(cliente) {
+                                    cliente.orden = i;
+                                    cliente.ultimaModificacion = Date.now();
+                                }
+                            });
+                            
+                            localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
+                            // Sincroniza en segundo plano a Github sin recargar la vista entera
+                            setTimeout(() => { syncToGithub(); }, 100);
+                        }
+                    });
+                });
+            }
         }
 
         // ================= ESTADO DE CUENTA =================
@@ -2508,4 +2510,5 @@
     </script>
 </body>
 </html>
+
 
