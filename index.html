@@ -14,9 +14,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
-    <!-- LIBRERÍA SORTABLE (Para arrastrar y ordenar en celular y PC) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap');
         
@@ -1353,6 +1350,9 @@
                         borderCard = 'border-rose-400 shadow-[0_0_10px_rgba(225,29,72,0.2)]';
                     }
                     
+                    const hasUp = i > 0 && search === '';
+                    const hasDown = i < clientesEnGrupo.length - 1 && search === '';
+                    
                     const zapsAsignados = dbZapatos.filter(z => z.clienteId === c.id && z.estado === 'Asignado');
                     const zapsPendientes = dbZapatos.filter(z => z.clienteId === c.id && (z.estado === 'Pedido' || z.estado === 'Bodega'));
                     
@@ -1365,13 +1365,12 @@
                     }
 
                     return `
-                    <div class="bg-slate-50 border ${borderCard} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow" data-id="${c.id}">
+                    <div class="bg-slate-50 border ${borderCard} rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between relative hover:shadow-md transition-shadow">
                         <div class="flex gap-3 min-w-[200px]">
-                            <!-- GRIP PARA DRAG AND DROP -->
-                            <div class="drag-handle flex flex-col justify-center items-center w-6 flex-shrink-0 text-slate-300 hover:text-indigo-500 cursor-grab active:cursor-grabbing transition-colors" title="Mantén presionado y arrastra para ordenar">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+                            <div class="flex flex-col gap-1 w-7 justify-center flex-shrink-0">
+                                <button onclick="moverCliente('${c.id}', -1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasUp?'opacity-30 cursor-not-allowed':''}" ${!hasUp?'disabled':''}>▲</button>
+                                <button onclick="moverCliente('${c.id}', 1)" class="h-8 flex items-center justify-center bg-white rounded-md border border-slate-200 hover:bg-slate-100 transition-colors ${!hasDown?'opacity-30 cursor-not-allowed':''}" ${!hasDown?'disabled':''}>▼</button>
                             </div>
-
                             <div class="flex flex-col justify-center items-start gap-1">
                                 <p class="font-black text-lg uppercase leading-tight" style="color: #1e293b !important;">${c.nombre}</p>
                                 ${estadoCobroBadge}
@@ -1425,7 +1424,7 @@
                             <p class="text-sm font-black text-emerald-600">${money(totalGrupo)}</p>
                         </div>
                     </div>
-                    <div class="sortable-group space-y-3">
+                    <div class="space-y-3">
                         ${cardsHtml}
                     </div>
                 </div>`;
@@ -1433,34 +1432,6 @@
             
             document.getElementById('stat-deuda-global').innerText = money(deudaGlobal);
             list.innerHTML = html;
-
-            // ======== INICIALIZAR DRAG AND DROP ========
-            // Solo lo activamos si el usuario NO está usando la barra de búsqueda, para no arruinar el orden general
-            if (search === '' && typeof Sortable !== 'undefined') {
-                document.querySelectorAll('.sortable-group').forEach(el => {
-                    new Sortable(el, {
-                        handle: '.drag-handle', // Solo se arrastra desde los 6 puntitos
-                        animation: 200, // Suavidad de movimiento
-                        ghostClass: 'opacity-50', // Transparencia del clon que arrastras
-                        onEnd: function (evt) {
-                            // Cuando sueltas el cliente, se guarda el nuevo orden en el sistema
-                            const items = Array.from(evt.to.children);
-                            items.forEach((itemNode, i) => {
-                                const id = itemNode.dataset.id;
-                                const cliente = dbClientes.find(c => c.id === id);
-                                if(cliente) {
-                                    cliente.orden = i;
-                                    cliente.ultimaModificacion = Date.now();
-                                }
-                            });
-                            
-                            localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
-                            // Sincroniza en segundo plano a Github sin recargar la vista entera
-                            setTimeout(() => { syncToGithub(); }, 100);
-                        }
-                    });
-                });
-            }
         }
 
         // ================= ESTADO DE CUENTA =================
@@ -2398,73 +2369,79 @@
             doc.text(`Tel: ${c.telefono || 'S/N'} | Zona: ${c.colonia} | Dia: ${c.diaCobro}`, 14, 34);
             doc.text(`Direccion: ${c.direccion || 'S/D'}`, 14, 40);
 
-            // ================= CAMBIO: HISTORIAL UNIFICADO =================
-            let transacciones = [];
+            doc.setFontSize(14);
+            if(deudaTotal > 0) doc.setTextColor(225, 29, 72); else doc.setTextColor(16, 185, 129); 
+            doc.text(`Saldo Restante: ${money(deudaTotal)}`, 14, 50);
+
+            let currentY = 58;
+
+            // --- Lógica del Libro Mayor (Cronológico) ---
+            let movimientos = [];
             
-            // Agregar Ventas (Cargos)
             zaps.forEach(z => {
-                transacciones.push({
-                    timestamp: z.fechaAsignacion ? new Date(z.fechaAsignacion + 'T00:00:00').getTime() : 0,
-                    fechaStr: formatFecha(z.fechaAsignacion),
-                    concepto: `COMPRA: ${z.modelo} (${z.tienda})`,
+                movimientos.push({
+                    fechaStr: z.fechaAsignacion || 'S/F',
+                    fechaObj: z.fechaAsignacion ? new Date(z.fechaAsignacion + 'T12:00:00') : new Date(0),
+                    concepto: `Cargo: ${z.modelo} (${z.tienda} T:${z.talla})`,
                     cargo: Number(z.precioVenta) || 0,
                     abono: 0
                 });
             });
-
-            // Agregar Abonos (Pagos)
+            
             abonos.forEach(a => {
-                transacciones.push({
-                    timestamp: a.fecha ? new Date(a.fecha + 'T00:00:00').getTime() : 0,
-                    fechaStr: formatFecha(a.fecha),
-                    concepto: `ABONO RECIBIDO`,
+                movimientos.push({
+                    fechaStr: a.fecha || 'S/F',
+                    fechaObj: a.fecha ? new Date(a.fecha + 'T12:00:00') : new Date(0),
+                    concepto: `Abono Recibido`,
                     cargo: 0,
                     abono: Number(a.monto) || 0
                 });
             });
 
-            // Ordenar cronológicamente (más antiguo primero)
-            transacciones.sort((a, b) => a.timestamp - b.timestamp);
+            // Ordenar cronológicamente (más antiguo primero para ver el balance progresivo)
+            movimientos.sort((a, b) => a.fechaObj - b.fechaObj);
 
-            let saldoAcumulado = 0;
-            const tableRows = transacciones.map(t => {
-                saldoAcumulado += t.cargo;
-                saldoAcumulado -= t.abono;
-                return [
-                    t.fechaStr,
-                    t.concepto,
-                    t.cargo > 0 ? money(t.cargo) : '-',
-                    t.abono > 0 ? money(t.abono) : '-',
-                    money(saldoAcumulado)
-                ];
+            let tableRows = [];
+            let saldo = 0;
+
+            movimientos.forEach(m => {
+                saldo += (m.cargo - m.abono);
+                tableRows.push([
+                    formatFecha(m.fechaStr),
+                    m.concepto,
+                    m.cargo > 0 ? money(m.cargo) : '',
+                    m.abono > 0 ? money(m.abono) : '',
+                    money(saldo)
+                ]);
             });
 
-            if (transacciones.length > 0) {
+            doc.setFontSize(12);
+            doc.setTextColor(51, 65, 85);
+            doc.text("Resumen de Movimientos", 14, currentY);
+            currentY += 4;
+
+            if (movimientos.length > 0) {
                 doc.autoTable({
-                    head: [["Fecha", "Movimiento", "Cargo (+)", "Abono (-)", "Saldo"]], 
+                    head: [["Fecha", "Concepto", "Cargo ($)", "Abono ($)", "Saldo"]], 
                     body: tableRows, 
-                    startY: 48, 
+                    startY: currentY, 
                     theme: 'striped',
-                    headStyles: { fillColor: [79, 70, 229], textColor: 255 }, 
+                    headStyles: { fillColor: [71, 85, 105], textColor: 255 }, 
                     styles: { fontSize: 9 }, 
                     columnStyles: { 
-                        2: { halign: 'right', textColor: [225, 29, 72] }, // Rojo para cargos
-                        3: { halign: 'right', textColor: [16, 185, 129] }, // Verde para abonos
-                        4: { halign: 'right', fontStyle: 'bold' } // Negrita para saldo
-                    }
+                        2: { halign: 'right', textColor: [225, 29, 72] }, // Cargo (Rojo)
+                        3: { halign: 'right', textColor: [16, 185, 129] }, // Abono (Verde)
+                        4: { halign: 'right', fontStyle: 'bold' } // Saldo final (Negrita)
+                    },
+                    foot: [["", "TOTAL PENDIENTE", "", "", money(deudaTotal)]],
+                    footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'right' }
                 });
             } else {
-                doc.setFontSize(10);
-                doc.text("No hay movimientos registrados en esta cuenta.", 14, 52);
+                doc.setFontSize(10); 
+                doc.text("No hay movimientos registrados.", 14, currentY + 6);
             }
 
-            let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 60;
-
-            doc.setFontSize(14);
-            if(deudaTotal > 0) doc.setTextColor(225, 29, 72); else doc.setTextColor(16, 185, 129); 
-            doc.text(`SALDO TOTAL PENDIENTE: ${money(deudaTotal)}`, 14, finalY);
-
-            doc.save(`EstadoCuenta_${c.nombre.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Cuenta_${c.nombre.replace(/\s+/g, '_')}.pdf`);
         }
 
         function generarPDFCorteDia() {
@@ -2566,5 +2543,4 @@
     </script>
 </body>
 </html>
-
 
