@@ -651,7 +651,7 @@
                 
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">¿Cuánto Abonó? ($)</label>
-                    <input type="number" id="ab-monto" required min="1" step="1" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-black text-2xl text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00">
+                    <input type="number" id="ab-monto" min="1" step="1" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-black text-2xl text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00">
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Fecha del Abono</label>
@@ -663,9 +663,14 @@
                     <span class="text-xs font-black text-emerald-800 uppercase">Enviar Recibo por WhatsApp</span>
                 </label>
 
-                <div class="pt-4 flex gap-3">
-                    <button type="button" onclick="closeModal('modal-abono')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
-                    <button type="button" onclick="confirmarAbono()" class="flex-1 py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Efectuar Cobro</button>
+                <div class="pt-2 flex flex-col gap-3">
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeModal('modal-abono')" class="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
+                        <button type="button" onclick="confirmarAbono()" class="flex-1 py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Efectuar Cobro</button>
+                    </div>
+                    <button type="button" onclick="registrarAplazo()" class="w-full py-3 bg-amber-50 border border-amber-200 text-amber-700 font-black rounded-xl uppercase text-xs hover:bg-amber-100 transition-colors shadow-sm flex items-center justify-center gap-2">
+                        <span class="text-base">⏳</span> El cliente aplazó el pago
+                    </button>
                 </div>
             </div>
         </div>
@@ -1149,7 +1154,13 @@
         function calcularDeuda(cliente) {
             const zapatosAsignados = dbZapatos.filter(z => z.clienteId === cliente.id && z.estado === 'Asignado');
             const totalZapatos = zapatosAsignados.reduce((acc, z) => acc + (Number(z.precioVenta) || 0), 0);
-            const totalAbonos = (cliente.abonos || []).reduce((acc, a) => acc + (Number(a.monto) || 0), 0);
+            
+            // Ignorar los registros de "aplazo" al calcular la deuda
+            const totalAbonos = (cliente.abonos || []).reduce((acc, a) => {
+                if (a.isAplazo) return acc;
+                return acc + (Number(a.monto) || 0);
+            }, 0);
+            
             return totalZapatos - totalAbonos;
         }
 
@@ -1334,7 +1345,8 @@
                     deudaGlobal += deuda;
                     
                     // SEMÁFORO DE COBROS A PRUEBA DE MODO OSCURO
-                    const pagoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end);
+                    const pagoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end && !a.isAplazo);
+                    const aplazoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end && a.isAplazo);
                     
                     let estadoCobroBadge = '';
                     let borderCard = 'border-slate-200';
@@ -1345,6 +1357,9 @@
                     } else if (pagoEstaSemana) {
                         estadoCobroBadge = `<div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: #dcfce3 !important; border-radius: 8px; border: 1px solid #10b981 !important;"><span style="font-size: 14px;">💚</span><span style="color: #059669 !important; font-size: 10px; font-weight: 900;">ABONÓ ESTA SEMANA</span></div>`;
                         borderCard = 'border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
+                    } else if (aplazoEstaSemana) {
+                        estadoCobroBadge = `<div style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: #fef3c7 !important; border-radius: 8px; border: 1px solid #fcd34d !important;"><span style="font-size: 14px;">⏳</span><span style="color: #d97706 !important; font-size: 10px; font-weight: 900;">COBRO APLAZADO</span></div>`;
+                        borderCard = 'border-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.2)]';
                     } else {
                         estadoCobroBadge = `<div class="alerta-critica" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: #fee2e2 !important; border-radius: 8px; border: 1px solid #e11d48 !important;"><span style="font-size: 14px;">🔴</span><span style="color: #e11d48 !important; font-size: 10px; font-weight: 900;">FALTA COBRAR ESTA SEMANA</span></div>`;
                         borderCard = 'border-rose-400 shadow-[0_0_10px_rgba(225,29,72,0.2)]';
@@ -1405,7 +1420,7 @@
                                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Saldo Pendiente</p>
                                 <p class="text-2xl font-black ${deuda > 0 ? 'text-rose-600' : 'text-emerald-500'} leading-none">${money(deuda)}</p>
                             </div>
-                            <button onclick="openAbonoModal('${c.id}')" class="mt-3 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-lg text-[10px] uppercase shadow-md transition-all">Registrar Abono</button>
+                            <button onclick="openAbonoModal('${c.id}')" class="mt-3 w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-lg text-[10px] uppercase shadow-md transition-all">Cobrar / Aplazar</button>
                         </div>
                     </div>`;
                 }).join('');
@@ -1443,13 +1458,31 @@
             document.getElementById('ec-deuda-total').innerText = money(calcularDeuda(cliente));
             document.getElementById('modal-estado-cuenta').dataset.clienteId = idCliente;
 
+            // Filtro de 6 meses
+            const fechaCorte = new Date();
+            fechaCorte.setMonth(fechaCorte.getMonth() - 6);
+
+            // ============ ZAPATOS ASIGNADOS (ADEUDOS) ============
             const zaps = dbZapatos.filter(z => z.clienteId === idCliente && z.estado === 'Asignado');
+            const zapsRecientes = [];
+            let zapsOcultos = 0;
+            
+            zaps.forEach(z => {
+                const f = new Date((z.fechaAsignacion || z.fechaLlegada || '2000-01-01') + 'T12:00:00');
+                if (f < fechaCorte) zapsOcultos++;
+                else zapsRecientes.push(z);
+            });
+
             const zapsContainer = document.getElementById('ec-lista-zapatos');
             
-            if(zaps.length === 0) {
-                zapsContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center border border-slate-100">No debe mercancía.</p>`;
+            if(zapsRecientes.length === 0) {
+                if (zapsOcultos > 0) {
+                    zapsContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center border border-slate-100">Solo hay ${zapsOcultos} adeudo(s) antiguo(s) oculto(s) por limpieza (>6 meses).</p>`;
+                } else {
+                    zapsContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center border border-slate-100">No debe mercancía.</p>`;
+                }
             } else {
-                zapsContainer.innerHTML = zaps.map(z => {
+                zapsContainer.innerHTML = zapsRecientes.map(z => {
                     const dias = calcularDiasDesde(z.fechaLlegada);
                     let badge = '';
                     if (dias > 30) badge = `<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-black text-[9px] alerta-critica shadow-sm">Lleva ${dias} días (Fuera de tiempo)</span>`;
@@ -1474,8 +1507,78 @@
                         </div>
                     </div>`;
                 }).join('');
+
+                if (zapsOcultos > 0) {
+                    zapsContainer.innerHTML += `<div class="mt-2 text-center p-2 text-[10px] font-bold text-slate-400 bg-slate-50 rounded-xl border border-slate-100">+ ${zapsOcultos} adeudo(s) antiguo(s) oculto(s) (>6m)</div>`;
+                }
             }
 
+            // ============ ABONOS ============
+            const abonos = cliente.abonos || [];
+            const abonosRecientes = [];
+            let abonosOcultos = 0;
+
+            abonos.forEach(a => {
+                const f = new Date((a.fecha || '2000-01-01') + 'T12:00:00');
+                if (f < fechaCorte) abonosOcultos++;
+                else abonosRecientes.push(a);
+            });
+
+            const abonosContainer = document.getElementById('ec-lista-abonos');
+            if(abonosRecientes.length === 0) {
+                if (abonosOcultos > 0) {
+                    abonosContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center border border-slate-100">Solo hay ${abonosOcultos} registro(s) antiguo(s) oculto(s) por limpieza (>6 meses).</p>`;
+                } else {
+                    abonosContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl text-center border border-slate-100">No hay abonos ni aplazos.</p>`;
+                }
+            } else {
+                const abonosOrdenados = [...abonosRecientes].reverse();
+                abonosContainer.innerHTML = abonosOrdenados.map(a => {
+                    if (a.isAplazo) {
+                        return `
+                        <div class="bg-amber-50 border border-amber-100 p-3 rounded-xl flex justify-between items-center group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-lg">
+                                    ⏳
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black text-amber-600 uppercase">Cobro Aplazado</p>
+                                    <p class="text-xs font-bold text-slate-700">${formatFecha(a.fecha)} ${a.motivo ? `<span class="text-[9px] font-normal italic text-slate-500 block">Motivo: ${a.motivo}</span>` : ''}</p>
+                                </div>
+                            </div>
+                            <button onclick="borrarAbono('${idCliente}', '${a.id}')" class="text-slate-300 hover:text-rose-500 bg-white rounded-full p-1 border border-slate-200 transition-colors" title="Eliminar registro">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>`;
+                    } else {
+                        return `
+                        <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center group">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black text-slate-400 uppercase">Pago realizado</p>
+                                    <p class="text-xs font-bold text-slate-700">${formatFecha(a.fecha)}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <p class="font-black text-indigo-700">${money(a.monto)}</p>
+                                <button onclick="borrarAbono('${idCliente}', '${a.id}')" class="text-slate-300 hover:text-rose-500 bg-white rounded-full p-1 border border-slate-200 transition-colors" title="Eliminar abono por error">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>`;
+                    }
+                }).join('');
+
+                if (abonosOcultos > 0) {
+                    abonosContainer.innerHTML += `<div class="mt-2 text-center p-2 text-[10px] font-bold text-slate-400 bg-slate-50 rounded-xl border border-slate-100">+ ${abonosOcultos} registro(s) antiguo(s) oculto(s) (>6m)</div>`;
+                }
+            }
+
+
+            // ============ APARTADOS Y PEDIDOS ============
             const apartados = dbZapatos.filter(z => z.clienteId === idCliente && (z.estado === 'Pedido' || z.estado === 'Bodega'));
             const secApartados = document.getElementById('ec-seccion-apartados');
             const contApartados = document.getElementById('ec-lista-apartados');
@@ -1501,36 +1604,11 @@
                 secApartados.classList.add('hidden');
             }
 
-            const abonos = cliente.abonos || [];
-            const abonosContainer = document.getElementById('ec-lista-abonos');
-            if(abonos.length === 0) {
-                abonosContainer.innerHTML = `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">No hay abonos.</p>`;
-            } else {
-                const abonosOrdenados = [...abonos].reverse();
-                abonosContainer.innerHTML = abonosOrdenados.map(a => `
-                <div class="bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center group">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase">Pago realizado</p>
-                            <p class="text-xs font-bold text-slate-700">${formatFecha(a.fecha)}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <p class="font-black text-indigo-700">${money(a.monto)}</p>
-                        <button onclick="borrarAbono('${idCliente}', '${a.id}')" class="text-slate-300 hover:text-rose-500 bg-white rounded-full p-1 border border-slate-200 transition-colors" title="Eliminar abono por error">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                        </button>
-                    </div>
-                </div>`).join('');
-            }
             document.getElementById('modal-estado-cuenta').classList.remove('hidden');
         }
 
         function borrarAbono(idCliente, idAbono) {
-            if(confirm("¿Eliminar este abono?\n\nLa deuda aumentará automáticamente al anular el pago.")) {
+            if(confirm("¿Eliminar este registro?\n\nSi es un pago, la deuda aumentará automáticamente al anularlo.")) {
                 const cliente = dbClientes.find(c => c.id === idCliente);
                 cliente.abonos = cliente.abonos.filter(a => a.id !== idAbono);
                 cliente.ultimaModificacion = Date.now();
@@ -2096,6 +2174,32 @@
                 }
             }
         }
+        
+        function registrarAplazo() {
+            const idC = document.getElementById('ab-cliente-id').value;
+            const f = document.getElementById('ab-fecha').value;
+            
+            let motivo = prompt("Motivo del aplazo (Opcional, Ej. 'No estaba', 'Para la quincena', 'No tuvo'):");
+            if (motivo === null) return; // Si el usuario da "Cancelar" en el prompt, no hace nada
+            
+            const c = dbClientes.find(x => x.id === idC); 
+            if(!c.abonos) c.abonos = []; 
+            
+            // Guardamos el registro con monto 0 y la bandera isAplazo
+            c.abonos.push({ id: uuid(), fecha: f, monto: 0, isAplazo: true, motivo: motivo.trim() });
+            c.ultimaModificacion = Date.now();
+            
+            localStorage.setItem('db_clientes', JSON.stringify(dbClientes)); 
+            
+            closeModal('modal-abono'); 
+            actualizarTodoYRenderizar();
+
+            if(!document.getElementById('modal-estado-cuenta').classList.contains('hidden')) {
+                openEstadoCuenta(idC);
+            }
+            
+            setTimeout(() => { syncToGithub(); }, 100);
+        }
 
         function abrirAbonoDesdeHistorial() { 
             const idC = document.getElementById('modal-estado-cuenta').dataset.clienteId;
@@ -2117,7 +2221,7 @@
             dbClientes.forEach(c => {
                 if (c.abonos) {
                     c.abonos.forEach(a => { 
-                        if(a.fecha) meses.add(a.fecha.substring(0, 7)); 
+                        if(a.fecha && !a.isAplazo && Number(a.monto) > 0) meses.add(a.fecha.substring(0, 7)); 
                     });
                 }
             });
@@ -2166,7 +2270,7 @@
             dbClientes.forEach(c => {
                 if(c.abonos) {
                     c.abonos.forEach(a => {
-                        if(a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end) {
+                        if(a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end && !a.isAplazo) {
                             abonosSemana += Number(a.monto);
                         }
                     });
@@ -2178,7 +2282,7 @@
             dbClientes.forEach(c => {
                 if(c.abonos) {
                     c.abonos.forEach(a => {
-                        if(a.fecha && a.fecha.startsWith(mesSeleccionado)) {
+                        if(a.fecha && a.fecha.startsWith(mesSeleccionado) && !a.isAplazo) {
                             totalAbonosMes += Number(a.monto);
                             listaAbonosMes.push({ nombre: c.nombre, monto: Number(a.monto), fecha: a.fecha });
                         }
@@ -2375,7 +2479,7 @@
 
             let currentY = 58;
 
-            // --- Lógica del Libro Mayor (Cronológico) ---
+            // --- Lógica del Libro Mayor (Cronológico con Límite de 6 meses) ---
             let movimientos = [];
             
             zaps.forEach(z => {
@@ -2384,43 +2488,80 @@
                     fechaObj: z.fechaAsignacion ? new Date(z.fechaAsignacion + 'T12:00:00') : new Date(0),
                     concepto: `Cargo: ${z.modelo} (${z.tienda}${z.marca ? ' / ' + z.marca : ''} T:${z.talla})`,
                     cargo: Number(z.precioVenta) || 0,
-                    abono: 0
+                    abono: 0,
+                    isAplazo: false
                 });
             });
             
             abonos.forEach(a => {
-                movimientos.push({
-                    fechaStr: a.fecha || 'S/F',
-                    fechaObj: a.fecha ? new Date(a.fecha + 'T12:00:00') : new Date(0),
-                    concepto: `Abono Recibido`,
-                    cargo: 0,
-                    abono: Number(a.monto) || 0
-                });
+                if (a.isAplazo) {
+                    movimientos.push({
+                        fechaStr: a.fecha || 'S/F',
+                        fechaObj: a.fecha ? new Date(a.fecha + 'T12:00:00') : new Date(0),
+                        concepto: `Aplazo de Cobro ${a.motivo ? '('+a.motivo+')' : ''}`,
+                        cargo: 0,
+                        abono: 0,
+                        isAplazo: true
+                    });
+                } else {
+                    movimientos.push({
+                        fechaStr: a.fecha || 'S/F',
+                        fechaObj: a.fecha ? new Date(a.fecha + 'T12:00:00') : new Date(0),
+                        concepto: `Abono Recibido`,
+                        cargo: 0,
+                        abono: Number(a.monto) || 0,
+                        isAplazo: false
+                    });
+                }
             });
 
             // Ordenar cronológicamente (más antiguo primero para ver el balance progresivo)
             movimientos.sort((a, b) => a.fechaObj - b.fechaObj);
 
+            // Filtro de Fecha de Corte (6 meses)
+            const fechaCorte = new Date();
+            fechaCorte.setMonth(fechaCorte.getMonth() - 6);
+
             let tableRows = [];
             let saldo = 0;
+            let saldoAnterior = 0;
+            let hayMovimientosAntiguos = false;
 
             movimientos.forEach(m => {
                 saldo += (m.cargo - m.abono);
-                tableRows.push([
-                    formatFecha(m.fechaStr),
-                    m.concepto,
-                    m.cargo > 0 ? money(m.cargo) : '',
-                    m.abono > 0 ? money(m.abono) : '',
-                    money(saldo)
-                ]);
+                
+                // Si el movimiento tiene más de 6 meses, no lo dibujamos pero sí guardamos el saldo
+                if (m.fechaObj < fechaCorte) {
+                    saldoAnterior = saldo;
+                    hayMovimientosAntiguos = true;
+                } else {
+                    tableRows.push([
+                        formatFecha(m.fechaStr),
+                        m.concepto,
+                        m.cargo > 0 ? money(m.cargo) : '',
+                        m.isAplazo ? '' : (m.abono > 0 ? money(m.abono) : ''),
+                        money(saldo)
+                    ]);
+                }
             });
+
+            // Si hubo movimientos viejos, agregamos la fila de saldo acumulado al inicio
+            if (hayMovimientosAntiguos) {
+                tableRows.unshift([
+                    '---',
+                    'SALDO ANTERIOR (> 6 meses)',
+                    '',
+                    '',
+                    money(saldoAnterior)
+                ]);
+            }
 
             doc.setFontSize(12);
             doc.setTextColor(51, 65, 85);
-            doc.text("Resumen de Movimientos", 14, currentY);
+            doc.text("Resumen de Movimientos Recientes", 14, currentY);
             currentY += 4;
 
-            if (movimientos.length > 0) {
+            if (tableRows.length > 0) {
                 doc.autoTable({
                     head: [["Fecha", "Concepto", "Cargo ($)", "Abono ($)", "Saldo"]], 
                     body: tableRows, 
@@ -2438,7 +2579,7 @@
                 });
             } else {
                 doc.setFontSize(10); 
-                doc.text("No hay movimientos registrados.", 14, currentY + 6);
+                doc.text("No hay movimientos registrados recientes.", 14, currentY + 6);
             }
 
             doc.save(`Cuenta_${c.nombre.replace(/\s+/g, '_')}.pdf`);
@@ -2450,10 +2591,10 @@
             let totalAbonosDia = 0; let listaAbonosDia = [];
             dbClientes.forEach(c => {
                 if(c.abonos) c.abonos.forEach(a => {
-                    if(a.fecha === fechaInput) { totalAbonosDia += Number(a.monto); listaAbonosDia.push({ nombre: c.nombre, monto: Number(a.monto), colonia: c.colonia || 'S/C' }); }
+                    if(a.fecha === fechaInput && !a.isAplazo) { totalAbonosDia += Number(a.monto); listaAbonosDia.push({ nombre: c.nombre, monto: Number(a.monto), colonia: c.colonia || 'S/C' }); }
                 });
             });
-            if(listaAbonosDia.length === 0) { alert(`No hay abonos en esta fecha.`); return; }
+            if(listaAbonosDia.length === 0) { alert(`No hay abonos monetarios en esta fecha.`); return; }
             listaAbonosDia.sort((a,b) => a.nombre.localeCompare(b.nombre));
 
             const { jsPDF } = window.jspdf;
@@ -2484,7 +2625,7 @@
             const mesSeleccionado = document.getElementById('select-mes-contaduria').value;
             if(!mesSeleccionado) return;
             let totalAbonosMes = 0; let listaAbonosMes = [];
-            dbClientes.forEach(c => { if(c.abonos) c.abonos.forEach(a => { if(a.fecha && a.fecha.startsWith(mesSeleccionado)) { totalAbonosMes += Number(a.monto); listaAbonosMes.push({ nombre: c.nombre, monto: Number(a.monto), fecha: a.fecha }); } }); });
+            dbClientes.forEach(c => { if(c.abonos) c.abonos.forEach(a => { if(a.fecha && a.fecha.startsWith(mesSeleccionado) && !a.isAplazo) { totalAbonosMes += Number(a.monto); listaAbonosMes.push({ nombre: c.nombre, monto: Number(a.monto), fecha: a.fecha }); } }); });
             let totalVentasMes = 0; let listaVentasMes = [];
             dbZapatos.forEach(z => { if(z.estado === 'Asignado' && z.fechaAsignacion && z.fechaAsignacion.startsWith(mesSeleccionado)) { totalVentasMes += Number(z.precioVenta); listaVentasMes.push(z); } });
 
@@ -2508,7 +2649,7 @@
 
             doc.setFontSize(14);
             doc.setTextColor(51, 65, 85);
-            doc.text("Detalle de Abonos", 14, currentY);
+            doc.text("Detalle de Abonos Monetarios", 14, currentY);
             currentY += 4;
 
             if (listaAbonosMes.length > 0) {
@@ -2519,7 +2660,7 @@
                 });
                 currentY = doc.lastAutoTable.finalY + 12;
             } else {
-                doc.setFontSize(10); doc.text("No hubo abonos este mes.", 14, currentY + 6); currentY += 16;
+                doc.setFontSize(10); doc.text("No hubo abonos monetarios este mes.", 14, currentY + 6); currentY += 16;
             }
 
             doc.setFontSize(14);
