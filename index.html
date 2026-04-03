@@ -726,9 +726,9 @@
         // ======= INICIALIZACION =======
         window.onload = () => {
             updateOnlineStatus(); 
-            document.getElementById('z-fecha').valueAsDate = new Date();
-            document.getElementById('ab-fecha').valueAsDate = new Date();
-            document.getElementById('fecha-corte-dia').valueAsDate = new Date();
+            document.getElementById('z-fecha').value = fmtLocal(new Date());
+            document.getElementById('ab-fecha').value = fmtLocal(new Date());
+            document.getElementById('fecha-corte-dia').value = fmtLocal(new Date());
             inicializarListaTallas(); 
             
             actualizarTodoYRenderizar(); 
@@ -1699,7 +1699,7 @@
 
         function openZapatoModal(id = null, forceEstado = null) {
             document.getElementById('form-zapato').reset();
-            document.getElementById('z-fecha').valueAsDate = new Date();
+            document.getElementById('z-fecha').value = fmtLocal(new Date());
             const selectTalla = document.getElementById('z-talla');
 
             if (id && id !== 'nuevo') {
@@ -2508,5 +2508,4 @@
     </script>
 </body>
 </html>
-
 
