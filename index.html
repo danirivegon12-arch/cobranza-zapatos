@@ -1461,7 +1461,7 @@
                         <div class="flex justify-between">
                             <div>
                                 <p class="font-black text-slate-700 uppercase text-sm">${z.modelo}</p>
-                                <p class="text-[10px] font-bold text-slate-500">${z.tienda} • Talla ${z.talla} • Color: ${z.color}</p>
+                                <p class="text-[10px] font-bold text-slate-500">${z.tienda}${z.marca ? ' • ' + z.marca : ''} • Talla ${z.talla} • Color: ${z.color}</p>
                             </div>
                             <p class="font-black text-emerald-700">${money(z.precioVenta)}</p>
                         </div>
@@ -1488,7 +1488,7 @@
                     <div class="bg-${isPedido?'blue':'emerald'}-50 border border-${isPedido?'blue':'emerald'}-${isPedido?'100':'200'} p-2.5 rounded-xl flex justify-between items-center shadow-sm">
                         <div>
                             <p class="font-black text-${isPedido?'blue':'emerald'}-900 uppercase text-xs">${z.modelo}</p>
-                            <p class="text-[9px] font-bold text-${isPedido?'blue':'emerald'}-600">${z.tienda} • Talla ${z.talla} • ${z.color}</p>
+                            <p class="text-[9px] font-bold text-${isPedido?'blue':'emerald'}-600">${z.tienda}${z.marca ? ' • ' + z.marca : ''} • Talla ${z.talla} • ${z.color}</p>
                         </div>
                         ${isPedido ? 
                             '<span class="px-2 py-1 bg-white text-blue-500 text-[8px] font-black uppercase rounded border border-blue-100">⏳ Por Surtir</span>' 
@@ -2382,7 +2382,7 @@
                 movimientos.push({
                     fechaStr: z.fechaAsignacion || 'S/F',
                     fechaObj: z.fechaAsignacion ? new Date(z.fechaAsignacion + 'T12:00:00') : new Date(0),
-                    concepto: `Cargo: ${z.modelo} (${z.tienda} T:${z.talla})`,
+                    concepto: `Cargo: ${z.modelo} (${z.tienda}${z.marca ? ' / ' + z.marca : ''} T:${z.talla})`,
                     cargo: Number(z.precioVenta) || 0,
                     abono: 0
                 });
@@ -2543,4 +2543,5 @@
     </script>
 </body>
 </html>
+
 
