@@ -33,6 +33,9 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
+        /* Ocultar la flecha por defecto del acordeón nativo */
+        summary::-webkit-details-marker { display: none; }
+        
         .alerta-critica { animation: pulse-red 2s infinite; }
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
@@ -147,13 +150,14 @@
                 <select id="filter-colonia" onchange="renderClientes()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer"></select>
 
                 <select id="agrupar-por" onchange="renderClientes()" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-xs text-white uppercase cursor-pointer hidden sm:block">
+                    <option value="ruta">Por Ruta (Colonia + Día)</option>
                     <option value="diaCobro">Agrupar por Día</option>
                     <option value="colonia">Agrupar por Colonia</option>
                 </select>
             </div>
         </div>
 
-        <div id="lista-clientes" class="space-y-6"></div>
+        <div id="lista-clientes" class="space-y-4"></div>
     </main>
 
     <main id="view-pedidos" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6 hidden">
@@ -1304,9 +1308,13 @@
         function moverCliente(id, direccion) {
             const agruparPor = document.getElementById('agrupar-por').value;
             const clienteToMove = dbClientes.find(c => c.id === id);
-            const groupKey = agruparPor === 'diaCobro' ? clienteToMove.diaCobro : clienteToMove.colonia;
             
-            let groupClients = dbClientes.filter(c => (agruparPor === 'diaCobro' ? c.diaCobro : c.colonia) === groupKey);
+            // Nueva lógica para entender la "ruta" combinada
+            const getGroupValue = (c) => agruparPor === 'ruta' ? `${c.colonia} / ${c.diaCobro}` : c[agruparPor];
+            const groupKey = getGroupValue(clienteToMove);
+            
+            let groupClients = dbClientes.filter(c => getGroupValue(c) === groupKey);
+            
             groupClients.sort((a,b) => (a.orden || 0) - (b.orden || 0));
             groupClients.forEach((c, i) => {
                 c.orden = i;
@@ -1328,8 +1336,18 @@
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
-        function renderClientes() {
+function renderClientes() {
             const list = document.getElementById('lista-clientes');
+            
+            // 1. Guardar qué acordeones están abiertos antes de actualizar la vista
+            const acordeonesAbiertos = new Set();
+            if (list) {
+                const detallesActuales = list.querySelectorAll('details[data-grupo]');
+                detallesActuales.forEach(d => {
+                    if (d.open) acordeonesAbiertos.add(d.getAttribute('data-grupo'));
+                });
+            }
+
             let deudaGlobal = 0;
             const search = document.getElementById('search-clientes').value.toLowerCase();
             const filterDia = document.getElementById('filter-dia').value;
@@ -1357,11 +1375,14 @@
                 return;
             }
 
-            const gruposSet = [...new Set(filtered.map(c => c[agruparPor]))].sort();
+            // Función para obtener la clave del grupo actual
+            const getGroupValue = (c) => agruparPor === 'ruta' ? `${c.colonia} / ${c.diaCobro}` : c[agruparPor];
+            
+            const gruposSet = [...new Set(filtered.map(getGroupValue))].sort();
             let html = '';
             
             gruposSet.forEach(grupoVal => {
-                const clientesEnGrupo = filtered.filter(c => c[agruparPor] === grupoVal).sort((a,b) => (a.orden||0) - (b.orden||0));
+                const clientesEnGrupo = filtered.filter(c => getGroupValue(c) === grupoVal).sort((a,b) => (a.orden||0) - (b.orden||0));
                 let totalGrupo = 0;
                 
                 let cardsHtml = clientesEnGrupo.map((c, i) => {
@@ -1449,30 +1470,33 @@
                     </div>`;
                 }).join('');
 
+                // 2. Comprobar si debemos inyectar la etiqueta 'open' para dejarlo desplegado
+                const debeEstarAbierto = (search !== '' || acordeonesAbiertos.has(grupoVal)) ? 'open' : '';
+
+                // Aplicación de detalles (Acordeones)
                 html += `
-                <div class="bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm">
-                    <div class="flex justify-between items-end border-b border-slate-100 pb-3 mb-4">
+                <details data-grupo="${grupoVal}" class="group bg-white border border-slate-200 rounded-[2rem] shadow-sm mb-4" ${debeEstarAbierto}>
+                    <summary class="flex justify-between items-end p-5 cursor-pointer list-none outline-none border-b border-transparent group-open:border-slate-100">
                         <h3 class="text-xl font-black text-slate-800 uppercase flex items-center gap-2">
-                            <svg class="text-indigo-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <svg class="text-indigo-500 transform transition-transform duration-200 group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
                             </svg> 
-                            ${agruparPor === 'diaCobro' ? 'Ruta' : 'Zona'}: ${grupoVal}
+                            ${agruparPor === 'ruta' ? 'Ruta' : (agruparPor === 'diaCobro' ? 'Día' : 'Zona')}: ${grupoVal}
                         </h3>
                         <div class="text-right">
-                            <p class="text-[9px] font-black text-slate-400 uppercase">Subtotal Grupo</p>
+                            <p class="text-[9px] font-black text-slate-400 uppercase">Subtotal</p>
                             <p class="text-sm font-black text-emerald-600">${money(totalGrupo)}</p>
                         </div>
-                    </div>
-                    <div class="space-y-3">
+                    </summary>
+                    <div class="p-5 pt-2 space-y-3">
                         ${cardsHtml}
                     </div>
-                </div>`;
+                </details>`;
             });
             
             document.getElementById('stat-deuda-global').innerText = money(deudaGlobal);
             list.innerHTML = html;
         }
-
         // ================= ESTADO DE CUENTA =================
         function openEstadoCuenta(idCliente) {
             const cliente = dbClientes.find(c => c.id === idCliente);
@@ -2887,4 +2911,4 @@
 
     </script>
 </body>
-    </html>
+</html>
