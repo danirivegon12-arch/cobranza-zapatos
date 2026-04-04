@@ -1174,33 +1174,9 @@
         }
 
         // ================= UTILIDADES DE PDF (COMPARTIR/IMPRIMIR) =================
-        async function procesarPDF(doc, nombreArchivo) {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const pdfBlob = doc.output('blob');
-
-            if (isMobile && navigator.canShare) {
-                try {
-                    const file = new File([pdfBlob], nombreArchivo, { type: 'application/pdf' });
-                    if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: nombreArchivo,
-                            text: 'Aquí tienes el documento de Zapatos Mariana.'
-                        });
-                        return; 
-                    }
-                } catch (error) {
-                    console.warn("Error al compartir o cancelado:", error);
-                }
-            }
-            
-            try {
-                const fileURL = URL.createObjectURL(pdfBlob);
-                const win = window.open(fileURL, '_blank');
-                if (!win) throw new Error("Pop-up bloqueado");
-            } catch (e) {
-                doc.save(nombreArchivo);
-            }
+        function procesarPDF(doc, nombreArchivo) {
+            // Fuerza directamente la descarga del archivo en el dispositivo
+            doc.save(nombreArchivo);
         }
 
 
@@ -1336,7 +1312,7 @@
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
-function renderClientes() {
+        function renderClientes() {
             const list = document.getElementById('lista-clientes');
             
             // 1. Guardar qué acordeones están abiertos antes de actualizar la vista
@@ -1497,6 +1473,7 @@ function renderClientes() {
             document.getElementById('stat-deuda-global').innerText = money(deudaGlobal);
             list.innerHTML = html;
         }
+
         // ================= ESTADO DE CUENTA =================
         function openEstadoCuenta(idCliente) {
             const cliente = dbClientes.find(c => c.id === idCliente);
