@@ -52,7 +52,7 @@
         <span id="sync-toast-text">Sincronizando...</span>
     </div>
 
-    <nav class="bg-slate-900 text-white p-4 sticky top-0 z-40 shadow-xl">
+    <nav class="bg-slate-900 text-white px-4 py-4 sticky top-0 z-40 shadow-xl">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             
             <div class="flex items-center gap-4 w-full md:w-auto justify-center md:justify-start relative">
@@ -388,7 +388,7 @@
                 <button type="button" onclick="closeModal('modal-github')" class="text-slate-400 hover:text-white font-bold text-2xl leading-none cursor-pointer">&times;</button>
             </div>
             <div class="p-6 space-y-4">
-                <p class="text-xs text-slate-500 font-bold">Conecta tu cuenta de GitHub para respaldar todo automáticamente. Ahora con fusión inteligente anti-borrado.</p>
+                <p class="text-xs text-slate-500 font-bold">Conecta tu cuenta de GitHub para respaldar todo automáticamente.</p>
                 <div>
                     <label class="text-[10px] font-black text-slate-500 uppercase ml-2">Personal Access Token</label>
                     <input type="password" id="gh-token" placeholder="ghp_..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
@@ -695,7 +695,7 @@
         let dbZapatos = JSON.parse(localStorage.getItem('db_zapatos')) || [];
         let dbClientes = JSON.parse(localStorage.getItem('db_clientes')) || [];
         let dbEliminados = JSON.parse(localStorage.getItem('db_eliminados')) || [];
-        let githubConfig = JSON.parse(localStorage.getItem('github_config')) || { token: '', user: '', repo: '', path: 'zapatos_mariana_backup.json' };
+        let githubConfig = JSON.parse(localStorage.getItem('github_config')) || { token: '', user: 'danirivegon12-arch', repo: 'cobranza-zapatos', path: 'zapatos_mariana_backup.json' };
         
         let migrado = false;
         
@@ -723,14 +723,12 @@
         // ==========================================
         function actualizarTodoYRenderizar() {
             try {
-                // 1. Actualizar Filtros y Listas desplegables
                 actualizarDatalistClientes(); 
                 actualizarFiltrosClientes();
                 actualizarFiltrosBodega();
                 actualizarFiltrosPedidos();
                 generarSelectorMesesContaduria();
 
-                // 2. Recargar todas las vistas silenciosamente (MUY RÁPIDO)
                 renderClientes();
                 renderPedidos();
                 renderBodega();
@@ -739,7 +737,6 @@
                 console.error("Hubo un ligero retraso al actualizar la vista:", error);
             }
         }
-
 
         // ======= INICIALIZACION =======
         window.onload = () => {
@@ -750,7 +747,6 @@
             inicializarListaTallas(); 
             
             actualizarTodoYRenderizar(); 
-            
             switchMainView('clientes'); 
             
             if(localStorage.getItem('pending_sync') === 'true') {
@@ -763,9 +759,9 @@
             setInterval(() => {
                 if(navigator.onLine && githubConfig.token) {
                     if (localStorage.getItem('pending_sync') === 'true') syncToGithub(); 
-                    else syncFromGithub(true); 
+                    else syncFromGithub(true); // Descarga y fusiona (Smart Sync)
                 }
-            }, 1800000); // Sincronización automática cada 30 min
+            }, 10000); // Sincronización automática cada 10 segundos
         };
 
         function updateOnlineStatus() {
@@ -801,8 +797,8 @@
         // ================= GITHUB NUBE (SMART SYNC / FUSIÓN) =================
         function openGithubModal() {
             document.getElementById('gh-token').value = githubConfig.token || '';
-            document.getElementById('gh-user').value = githubConfig.user || '';
-            document.getElementById('gh-repo').value = githubConfig.repo || '';
+            document.getElementById('gh-user').value = githubConfig.user || 'danirivegon12-arch';
+            document.getElementById('gh-repo').value = githubConfig.repo || 'cobranza-zapatos';
             document.getElementById('modal-github').classList.remove('hidden');
         }
 
@@ -874,48 +870,40 @@
             return await fetch(url, config);
         }
 
-        // --- ALGORITMO DE FUSIÓN (SMART MERGE CON PAPELERA) ---
         function fusionarDatos(localData, remoteData) {
             if (!remoteData || (!remoteData.clientes && !remoteData.zapatos)) return localData;
 
-            // 0. Unificar Papelera de Reciclaje (Tombstones)
             let eliminadosSet = new Set([
                 ...(localData.eliminados || []), 
                 ...(remoteData.eliminados || [])
             ]);
 
-            // 1. Fusionar Clientes y sus Abonos
             let clientesMap = new Map();
             
-            // Cargar los remotos (solo si NO están eliminados)
             if (remoteData.clientes) {
                 remoteData.clientes.forEach(c => {
                     if(!eliminadosSet.has(c.id)) clientesMap.set(c.id, c);
                 });
             }
             
-            // Integrar los locales de forma inteligente
             if (localData.clientes) {
                 localData.clientes.forEach(cLocal => {
-                    if(eliminadosSet.has(cLocal.id)) return; // Ignorar si fue eliminado intencionalmente
+                    if(eliminadosSet.has(cLocal.id)) return; 
 
                     if (clientesMap.has(cLocal.id)) {
                         let cRemote = clientesMap.get(cLocal.id);
                         
                         let abonosMap = new Map();
-                        // Agregar abonos remotos (solo si no fueron borrados)
                         if (cRemote.abonos) cRemote.abonos.forEach(a => {
                             if(!eliminadosSet.has(a.id)) abonosMap.set(a.id, a);
                         });
                         
-                        // Agregar abonos locales (solo si no fueron borrados y no existen ya)
                         if (cLocal.abonos) {
                             cLocal.abonos.forEach(a => {
                                 if (!eliminadosSet.has(a.id) && !abonosMap.has(a.id)) abonosMap.set(a.id, a);
                             });
                         }
                         
-                        // Determinar quién tiene la información más reciente
                         let clientToKeep;
                         if ((cLocal.ultimaModificacion || 0) >= (cRemote.ultimaModificacion || 0)) {
                             clientToKeep = { ...cLocal };
@@ -931,7 +919,6 @@
                 });
             }
 
-            // 2. Fusionar Zapatos
             let zapatosMap = new Map();
             
             if (remoteData.zapatos) {
@@ -942,12 +929,11 @@
             
             if (localData.zapatos) {
                 localData.zapatos.forEach(zLocal => {
-                    if(eliminadosSet.has(zLocal.id)) return; // Ignorar si fue eliminado intencionalmente
+                    if(eliminadosSet.has(zLocal.id)) return; 
 
                     if (zapatosMap.has(zLocal.id)) {
                         let zRemote = zapatosMap.get(zLocal.id);
                         
-                        // Gana el más reciente
                         if ((zLocal.ultimaModificacion || 0) >= (zRemote.ultimaModificacion || 0)) {
                             zapatosMap.set(zLocal.id, zLocal);
                         } else {
@@ -962,7 +948,7 @@
             return {
                 clientes: Array.from(clientesMap.values()),
                 zapatos: Array.from(zapatosMap.values()),
-                eliminados: Array.from(eliminadosSet) // Devolvemos la lista negra combinada
+                eliminados: Array.from(eliminadosSet) 
             };
         }
 
@@ -979,7 +965,6 @@
                 let sha = "";
                 let remoteData = null;
                 
-                // 1. Descargar remoto para fusionar primero
                 const getRes = await apiGithub('GET');
                 if (getRes.ok) {
                     const getData = await getRes.json();
@@ -990,10 +975,8 @@
                 
                 const localData = { clientes: dbClientes, zapatos: dbZapatos, eliminados: dbEliminados };
                 
-                // 2. Aplicar el Smart Merge (Fusión inteligente)
                 const mergedData = fusionarDatos(localData, remoteData);
                 
-                // 3. Actualizar la vista local para que el usuario vea los datos de su pareja inmediatamente
                 dbClientes = mergedData.clientes;
                 dbZapatos = mergedData.zapatos;
                 dbEliminados = mergedData.eliminados;
@@ -1002,7 +985,6 @@
                 localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
                 actualizarTodoYRenderizar();
 
-                // 4. Subir la versión combinada perfecta
                 const contentBase64 = utf8_to_b64(JSON.stringify(mergedData));
                 const putRes = await apiGithub('PUT', {
                     message: `Fusión Automática SmartSync: ${new Date().toLocaleString()}`,
@@ -1168,7 +1150,6 @@
             const zapatosAsignados = dbZapatos.filter(z => z.clienteId === cliente.id && z.estado === 'Asignado');
             const totalZapatos = zapatosAsignados.reduce((acc, z) => acc + (Number(z.precioVenta) || 0), 0);
             
-            // Ignorar los registros de "aplazo" al calcular la deuda
             const totalAbonos = (cliente.abonos || []).reduce((acc, a) => {
                 if (a.isAplazo) return acc;
                 return acc + (Number(a.monto) || 0);
@@ -1187,6 +1168,37 @@
             if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
             return fecha;
         }
+
+        // ================= UTILIDADES DE PDF (COMPARTIR/IMPRIMIR) =================
+        async function procesarPDF(doc, nombreArchivo) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const pdfBlob = doc.output('blob');
+
+            if (isMobile && navigator.canShare) {
+                try {
+                    const file = new File([pdfBlob], nombreArchivo, { type: 'application/pdf' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: nombreArchivo,
+                            text: 'Aquí tienes el documento de Zapatos Mariana.'
+                        });
+                        return; 
+                    }
+                } catch (error) {
+                    console.warn("Error al compartir o cancelado:", error);
+                }
+            }
+            
+            try {
+                const fileURL = URL.createObjectURL(pdfBlob);
+                const win = window.open(fileURL, '_blank');
+                if (!win) throw new Error("Pop-up bloqueado");
+            } catch (e) {
+                doc.save(nombreArchivo);
+            }
+        }
+
 
         // ================= CLIENTES Y RUTAS =================
         function actualizarFiltrosClientes() {
@@ -1277,7 +1289,7 @@
                     return z; 
                 });
                 
-                dbEliminados.push(id); // Registrar eliminación para la nube
+                dbEliminados.push(id); 
 
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
@@ -1357,7 +1369,6 @@
                     totalGrupo += deuda; 
                     deudaGlobal += deuda;
                     
-                    // SEMÁFORO DE COBROS A PRUEBA DE MODO OSCURO
                     const pagoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end && !a.isAplazo);
                     const aplazoEstaSemana = (c.abonos || []).some(a => a.fecha >= rangoSemana.start && a.fecha <= rangoSemana.end && a.isAplazo);
                     
@@ -1471,11 +1482,9 @@
             document.getElementById('ec-deuda-total').innerText = money(calcularDeuda(cliente));
             document.getElementById('modal-estado-cuenta').dataset.clienteId = idCliente;
 
-            // Filtro de 6 meses
             const fechaCorte = new Date();
             fechaCorte.setMonth(fechaCorte.getMonth() - 6);
 
-            // ============ ZAPATOS ASIGNADOS (ADEUDOS) ============
             const zaps = dbZapatos.filter(z => z.clienteId === idCliente && z.estado === 'Asignado');
             const zapsRecientes = [];
             let zapsOcultos = 0;
@@ -1526,7 +1535,6 @@
                 }
             }
 
-            // ============ ABONOS ============
             const abonos = cliente.abonos || [];
             const abonosRecientes = [];
             let abonosOcultos = 0;
@@ -1591,7 +1599,6 @@
             }
 
 
-            // ============ APARTADOS Y PEDIDOS ============
             const apartados = dbZapatos.filter(z => z.clienteId === idCliente && (z.estado === 'Pedido' || z.estado === 'Bodega'));
             const secApartados = document.getElementById('ec-seccion-apartados');
             const contApartados = document.getElementById('ec-lista-apartados');
@@ -1626,7 +1633,7 @@
                 cliente.abonos = cliente.abonos.filter(a => a.id !== idAbono);
                 cliente.ultimaModificacion = Date.now();
                 
-                dbEliminados.push(idAbono); // Registrar eliminación para la nube
+                dbEliminados.push(idAbono); 
 
                 localStorage.setItem('db_clientes', JSON.stringify(dbClientes));
                 localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
@@ -1660,7 +1667,6 @@
 
         // ================= PEDIDOS / ENCARGOS =================
         function actualizarFiltrosPedidos() {
-            // Actualizar filtro de tiendas
             const selectFiltroTienda = document.getElementById('filter-tienda-pedidos');
             const tiendas = [...new Set(dbZapatos.filter(z => z.estado === 'Pedido').map(z => z.tienda))].filter(Boolean).sort();
             
@@ -1670,7 +1676,6 @@
             if(tiendas.includes(valTienda)) selectFiltroTienda.value = valTienda; 
             else selectFiltroTienda.value = 'Todas';
 
-            // Actualizar filtro de clientes
             const selectFiltroCliente = document.getElementById('filter-cliente-pedidos');
             const pedidos = dbZapatos.filter(z => z.estado === 'Pedido');
             const clientesIds = [...new Set(pedidos.map(z => z.clienteId))].filter(Boolean);
@@ -1752,7 +1757,6 @@
 
         // ================= BODEGA =================
         function actualizarFiltrosBodega() {
-            // Actualizar filtro de tiendas
             const selectFiltroTienda = document.getElementById('filter-tienda-bodega');
             const tiendas = [...new Set(dbZapatos.map(z => z.tienda))].filter(Boolean).sort();
             
@@ -1762,7 +1766,6 @@
             if(tiendas.includes(valTienda)) selectFiltroTienda.value = valTienda; 
             else selectFiltroTienda.value = 'Todas';
 
-            // Actualizar filtro de clientes
             const selectFiltroCliente = document.getElementById('filter-cliente-bodega');
             const bodegaItems = dbZapatos.filter(z => z.estado === 'Bodega' || z.estado === 'Asignado' || z.estado === 'Devolución');
             const clientesIds = [...new Set(bodegaItems.map(z => z.clienteId))].filter(Boolean);
@@ -1892,7 +1895,7 @@
         function borrarZapato(id, vista = 'bodega') {
             if(confirm('¿Eliminar definitivamente este registro del sistema?')) {
                 dbZapatos = dbZapatos.filter(z => z.id !== id); 
-                dbEliminados.push(id); // Registrar eliminación para la nube
+                dbEliminados.push(id); 
 
                 localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
                 localStorage.setItem('db_eliminados', JSON.stringify(dbEliminados));
@@ -2037,7 +2040,6 @@
                 document.getElementById('a-cliente').value = ''; 
             }
             
-            // Si tiene precio acordado guardado, lo precargamos en el campo de venta
             document.getElementById('a-precio').value = z.precioAcordado ? z.precioAcordado : ''; 
             document.getElementById('modal-asignar').classList.remove('hidden');
         }
@@ -2127,7 +2129,6 @@
             setTimeout(() => { syncToGithub(); }, 100);
         }
 
-        // Listener para que al seleccionar zapato se autollene el precio si hay uno acordado
         document.getElementById('vc-zapato').addEventListener('change', function(e) {
             const zId = e.target.value;
             if(zId) {
@@ -2193,12 +2194,11 @@
             const f = document.getElementById('ab-fecha').value;
             
             let motivo = prompt("Motivo del aplazo (Opcional, Ej. 'No estaba', 'Para la quincena', 'No tuvo'):");
-            if (motivo === null) return; // Si el usuario da "Cancelar" en el prompt, no hace nada
+            if (motivo === null) return; 
             
             const c = dbClientes.find(x => x.id === idC); 
             if(!c.abonos) c.abonos = []; 
             
-            // Guardamos el registro con monto 0 y la bandera isAplazo
             c.abonos.push({ id: uuid(), fecha: f, monto: 0, isAplazo: true, motivo: motivo.trim() });
             c.ultimaModificacion = Date.now();
             
@@ -2416,7 +2416,7 @@
                 columnStyles: { 1: { fontStyle: 'bold' } }
             });
 
-            doc.save(`Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`);
+            procesarPDF(doc, `Encargos_${isTodas?'Todas':filterTienda}_${fechaHoy.replace(/\//g,'-')}.pdf`);
         }
 
         function generarPDFBodega() {
@@ -2461,7 +2461,7 @@
                 styles: { fontSize: 9, cellPadding: 3, valign: 'middle' }
             });
 
-            doc.save(`Inventario.pdf`);
+            procesarPDF(doc, 'Inventario.pdf');
         }
 
         function generarPDFEstadoCuenta() {
@@ -2492,7 +2492,6 @@
 
             let currentY = 58;
 
-            // --- Lógica del Libro Mayor (Cronológico con Límite de 6 meses) ---
             let movimientos = [];
             
             zaps.forEach(z => {
@@ -2528,10 +2527,8 @@
                 }
             });
 
-            // Ordenar cronológicamente (más antiguo primero para ver el balance progresivo)
             movimientos.sort((a, b) => a.fechaObj - b.fechaObj);
 
-            // Filtro de Fecha de Corte (6 meses)
             const fechaCorte = new Date();
             fechaCorte.setMonth(fechaCorte.getMonth() - 6);
 
@@ -2543,7 +2540,6 @@
             movimientos.forEach(m => {
                 saldo += (m.cargo - m.abono);
                 
-                // Si el movimiento tiene más de 6 meses, no lo dibujamos pero sí guardamos el saldo
                 if (m.fechaObj < fechaCorte) {
                     saldoAnterior = saldo;
                     hayMovimientosAntiguos = true;
@@ -2558,7 +2554,6 @@
                 }
             });
 
-            // Si hubo movimientos viejos, agregamos la fila de saldo acumulado al inicio
             if (hayMovimientosAntiguos) {
                 tableRows.unshift([
                     '---',
@@ -2583,9 +2578,9 @@
                     headStyles: { fillColor: [71, 85, 105], textColor: 255 }, 
                     styles: { fontSize: 9 }, 
                     columnStyles: { 
-                        2: { halign: 'right', textColor: [225, 29, 72] }, // Cargo (Rojo)
-                        3: { halign: 'right', textColor: [16, 185, 129] }, // Abono (Verde)
-                        4: { halign: 'right', fontStyle: 'bold' } // Saldo final (Negrita)
+                        2: { halign: 'right', textColor: [225, 29, 72] }, 
+                        3: { halign: 'right', textColor: [16, 185, 129] }, 
+                        4: { halign: 'right', fontStyle: 'bold' } 
                     },
                     foot: [["", "TOTAL PENDIENTE", "", "", money(deudaTotal)]],
                     footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'right' }
@@ -2595,7 +2590,7 @@
                 doc.text("No hay movimientos registrados recientes.", 14, currentY + 6);
             }
 
-            doc.save(`Cuenta_${c.nombre.replace(/\s+/g, '_')}.pdf`);
+            procesarPDF(doc, `Cuenta_${c.nombre.replace(/\s+/g, '_')}.pdf`);
         }
 
         function generarPDFCorteDia() {
@@ -2631,7 +2626,7 @@
                 headStyles: { fillColor: [79, 70, 229], textColor: 255 }, styles: { fontSize: 10 }, columnStyles: { 2: { halign: 'right', textColor: [16, 185, 129], fontStyle: 'bold' } }
             });
 
-            doc.save(`Corte_${fechaInput}.pdf`);
+            procesarPDF(doc, `Corte_${fechaInput}.pdf`);
         }
 
         function generarPDFContaduria() {
@@ -2691,7 +2686,7 @@
                 doc.setFontSize(10); doc.text("No hubo ventas este mes.", 14, currentY + 6);
             }
 
-            doc.save(`Corte_${mesSeleccionado}.pdf`);
+            procesarPDF(doc, `Corte_${mesSeleccionado}.pdf`);
         }
 
         // ======================= ESCÁNER OCR DE ETIQUETAS (AUTOMÁTICO MEJORADO) =======================
@@ -2701,7 +2696,6 @@
         let ocrWorker = null;
         let ocrAutoMode = false;
         
-        // NUEVAS VARIABLES PARA MÚLTIPLES CÁMARAS
         let camarasDisponibles = [];
         let indiceCamaraActual = 0;
 
@@ -2710,14 +2704,10 @@
             document.getElementById('ocr-status').innerHTML = "⏳ Inicializando motor de lectura...<br><span class='text-[9px]'>Esto solo toma unos segundos la primera vez.</span>";
             const video = document.getElementById('ocr-video');
             try {
-                // 1. Pedir permiso genérico primero para poder leer los nombres (labels) de las cámaras
                 let tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                
-                // 2. Leer la lista de todas las cámaras conectadas
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 camarasDisponibles = devices.filter(device => device.kind === 'videoinput');
                 
-                // Mostrar botón de cambio de cámara si hay más de una
                 const btnCambiar = document.getElementById('btn-cambiar-camara');
                 if (btnCambiar) {
                     if (camarasDisponibles.length > 1) {
@@ -2727,17 +2717,15 @@
                     }
                 }
 
-                // 3. Filtrar para evitar la cámara "Ultra Gran Angular", "Macro", etc.
                 let selectedCameraId = null;
                 const backCameras = camarasDisponibles.filter(d => 
                     d.label.toLowerCase().includes('back') || 
                     d.label.toLowerCase().includes('trasera') || 
                     d.label.toLowerCase().includes('environment') ||
-                    d.label.toLowerCase().includes('0') // En Android a veces la principal es la 0
+                    d.label.toLowerCase().includes('0') 
                 );
 
                 if (backCameras.length > 0) {
-                    // Excluimos explícitamente las lentes secundarias (Ultra wide, Macro, Telephoto)
                     const mainCameras = backCameras.filter(d => 
                         !d.label.toLowerCase().includes('ultra') && 
                         !d.label.toLowerCase().includes('wide') && 
@@ -2752,23 +2740,18 @@
                         selectedCameraId = backCameras[0].deviceId;
                     }
                 } else if (camarasDisponibles.length > 1) {
-                    // Si no tienen label o no coinciden, tomamos la última (suele ser la trasera en móviles)
                     selectedCameraId = camarasDisponibles[camarasDisponibles.length - 1].deviceId;
                 }
 
-                // Obtener el índice inicial
                 if (selectedCameraId) {
                     indiceCamaraActual = camarasDisponibles.findIndex(c => c.deviceId === selectedCameraId);
                     if (indiceCamaraActual === -1) indiceCamaraActual = 0;
                 }
 
-                // 4. Detener el stream temporal
                 tempStream.getTracks().forEach(track => track.stop());
 
-                // 5. Iniciar la cámara
                 await iniciarStreamLente(selectedCameraId);
 
-                // Inicializamos el worker de Tesseract UNA sola vez
                 if (!ocrWorker) {
                     ocrWorker = await Tesseract.createWorker('eng');
                 }
@@ -2784,7 +2767,6 @@
             }
         }
 
-        // FUNCIÓN NUEVA PARA INICIAR EL STREAM
         async function iniciarStreamLente(deviceId) {
             const video = document.getElementById('ocr-video');
             if (videoStream) {
@@ -2798,7 +2780,6 @@
             video.srcObject = videoStream;
         }
 
-        // FUNCIÓN NUEVA PARA CAMBIAR CÁMARA MANUALMENTE
         async function cambiarCamara() {
             if (camarasDisponibles.length <= 1) return;
             
@@ -2817,7 +2798,7 @@
         }
 
         function cerrarScanner() {
-            ocrAutoMode = false; // Detenemos el escáner continuo
+            ocrAutoMode = false;
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
@@ -2828,14 +2809,11 @@
         function loopEscaneoAutomatico() {
             if (!ocrAutoMode) return;
 
-            // Si no está procesando actualmente, analizamos la imagen.
-            // Al terminar, nos esperamos un segundo y volvemos a llamarnos a nosotros mismos.
             if (!isProcessingOCR) {
                 analizarImagenAutomatico().finally(() => {
                     if (ocrAutoMode) setTimeout(loopEscaneoAutomatico, 1000);
                 });
             } else {
-                // Si aún está ocupado (porque la confirmación está abierta o tardó), intentamos en 1 seg.
                 setTimeout(loopEscaneoAutomatico, 1000);
             }
         }
@@ -2847,7 +2825,6 @@
             isProcessingOCR = true;
             const statusEl = document.getElementById('ocr-status');
 
-            // Congelar frame de la cámara en un canvas invisible
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -2855,7 +2832,6 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             try {
-                // Usamos el worker persistente (mucho más rápido que Tesseract.recognize directo)
                 const result = await ocrWorker.recognize(canvas);
                 const textoDetectado = result.data.text.toUpperCase();
                 const numerosDetectados = textoDetectado.match(/\d+/g) || [];
@@ -2868,12 +2844,10 @@
                     let modeloSinEspacios = modelo.replace(/\s+/g, '');
                     let soloNumerosModelo = modelo.replace(/\D/g, '');
 
-                    // Comparamos el modelo exacto con el texto que vio la cámara
                     if (textoDetectado.includes(modelo) || (modeloSinEspacios.length > 2 && textoDetectado.replace(/\s+/g,'').includes(modeloSinEspacios))) {
                         pedidoEncontrado = z; break;
                     }
                     
-                    // Comparamos si la cámara captó la secuencia de números específica de tu modelo
                     if (soloNumerosModelo.length >= 2 && numerosDetectados.includes(soloNumerosModelo)) {
                         pedidoEncontrado = z; break;
                     }
@@ -2897,7 +2871,6 @@
                         statusEl.innerText = "Escaneando... Apunta a los números del modelo.";
                     }
                 } else {
-                    // Actualizamos sutilmente la UI para que sepas que está trabajando
                     if (numerosDetectados.length > 0) {
                         statusEl.innerHTML = `<span class="text-indigo-600 font-black">Buscando... Leyendo: ${numerosDetectados.slice(0,4).join(', ')}</span>`;
                     } else {
