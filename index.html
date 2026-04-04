@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Bloqueo de Modo Oscuro destructivo en Xiaomi/Poco -->
     <meta name="color-scheme" content="light only">
     <title>Zapatos Mariana - Cobranza e Inventario</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- LIBRERÍAS NATIVAS DE PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- LIBRERÍA DE RECONOCIMIENTO DE TEXTO / OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     
     <style>
@@ -47,18 +43,15 @@
 </head>
 <body class="antialiased flex flex-col min-h-screen">
 
-    <!-- Datalists globales -->
     <datalist id="clientes-datalist"></datalist>
     <datalist id="tiendas-existentes"></datalist>
     <datalist id="colonias-existentes"></datalist>
 
-    <!-- TOAST DE SINCRONIZACIÓN -->
     <div id="sync-toast" class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-3 transition-all duration-300 translate-y-20 opacity-0 z-[100]">
         <span id="sync-toast-icon" class="text-lg">☁️</span>
         <span id="sync-toast-text">Sincronizando...</span>
     </div>
 
-    <!-- ================= BARRA DE NAVEGACION ================= -->
     <nav class="bg-slate-900 text-white p-4 sticky top-0 z-40 shadow-xl">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             
@@ -112,7 +105,6 @@
         </div>
     </nav>
 
-    <!-- ================= VISTA CLIENTES (PRINCIPAL) ================= -->
     <main id="view-clientes" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6">
         
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
@@ -164,7 +156,6 @@
         <div id="lista-clientes" class="space-y-6"></div>
     </main>
 
-    <!-- ================= VISTA PEDIDOS (ENCARGOS) ================= -->
     <main id="view-pedidos" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6 hidden">
         
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
@@ -194,7 +185,6 @@
             </div>
         </div>
 
-        <!-- FILTROS Y PDF DE PEDIDOS -->
         <div class="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
             <select id="filter-tienda-pedidos" onchange="renderPedidos()" class="bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-xs text-slate-800 uppercase cursor-pointer hover:bg-slate-50 w-full flex-grow"></select>
             
@@ -211,7 +201,6 @@
         <div id="lista-pedidos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
     </main>
 
-    <!-- ================= VISTA BODEGA ================= -->
     <main id="view-bodega" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6 hidden">
         
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -270,7 +259,6 @@
         <div id="lista-bodega" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
     </main>
 
-    <!-- ================= VISTA CONTADURIA (CORTES Y BALANCES) ================= -->
     <main id="view-contaduria" class="max-w-7xl mx-auto w-full p-4 sm:p-6 flex-grow space-y-6 hidden">
         
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
@@ -280,7 +268,6 @@
             </div>
             
             <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center justify-end flex-wrap">
-                <!-- Grupo PDF Diario -->
                 <div class="flex w-full sm:w-auto gap-2">
                     <input type="date" id="fecha-corte-dia" class="flex-1 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-indigo-900 cursor-pointer shadow-sm">
                     <button onclick="generarPDFCorteDia()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-xl font-black text-[10px] shadow-md uppercase tracking-wider flex justify-center items-center gap-2 transition-colors whitespace-nowrap">
@@ -288,7 +275,6 @@
                         Corte Diario
                     </button>
                 </div>
-                <!-- Grupo PDF Mensual -->
                 <div class="flex w-full sm:w-auto gap-2">
                     <select id="select-mes-contaduria" onchange="renderContaduria()" class="flex-1 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 outline-none font-bold text-sm text-purple-900 cursor-pointer shadow-sm"></select>
                     <button onclick="generarPDFContaduria()" class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-3 rounded-xl font-black text-[10px] shadow-md uppercase tracking-wider flex justify-center items-center gap-2 transition-colors whitespace-nowrap">
@@ -300,7 +286,6 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Global stats -->
             <div class="bg-rose-50 p-5 rounded-2xl border border-rose-100 shadow-sm relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 opacity-10 text-rose-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -310,7 +295,6 @@
                 <p class="text-xs font-bold text-rose-500 mt-2 relative z-10">De <span id="cont-clientes-deuda">0</span> clientes activos</p>
             </div>
 
-            <!-- Weekly Abonos -->
             <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 opacity-10 text-emerald-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
@@ -320,7 +304,6 @@
                 <p class="text-xs font-bold text-emerald-600 mt-2 relative z-10" id="cont-fechas-semana">Lun a Dom</p>
             </div>
 
-            <!-- Monthly Abonos (Selected) -->
             <div class="bg-purple-50 p-5 rounded-2xl border border-purple-100 shadow-sm relative overflow-hidden lg:col-span-2">
                 <div class="absolute -right-4 -top-4 opacity-10 text-purple-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
@@ -339,7 +322,6 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Listado Ventas -->
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
                 <h3 class="text-sm font-black text-slate-700 uppercase border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
                     Mercancía Entregada
@@ -348,7 +330,6 @@
                 <div id="cont-lista-ventas" class="space-y-3 flex-grow max-h-[400px] overflow-y-auto custom-scrollbar pr-2"></div>
             </div>
 
-            <!-- Listado Abonos -->
             <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full">
                 <h3 class="text-sm font-black text-slate-700 uppercase border-b border-slate-100 pb-3 mb-4 flex justify-between items-center">
                     Registro de Abonos
@@ -359,9 +340,6 @@
         </div>
     </main>
 
-    <!-- ================= MODALES GLOBALES ================= -->
-
-    <!-- Modal Escáner OCR de Etiquetas -->
     <div id="modal-scanner" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
@@ -373,10 +351,8 @@
             </div>
             <div class="p-4 flex flex-col items-center bg-slate-50">
                 
-                <!-- Contenedor del lector de cámara -->
                 <div class="w-full rounded-2xl overflow-hidden bg-black shadow-inner min-h-[250px] max-h-[300px] border-4 border-slate-800 relative flex items-center justify-center">
                     <video id="ocr-video" autoplay playsinline class="w-full h-full object-cover"></video>
-                    <!-- Guía visual -->
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div class="w-3/4 h-16 border-2 border-dashed border-emerald-500 rounded-lg bg-emerald-500/20"></div>
                     </div>
@@ -385,10 +361,14 @@
                 <p id="ocr-status" class="text-xs text-slate-500 font-bold mt-4 text-center px-4 h-10 flex flex-col items-center justify-center leading-tight">
                     Iniciando cámara...
                 </p>
+
+                <button type="button" id="btn-cambiar-camara" onclick="cambiarCamara()" class="mt-2 w-full py-2 bg-slate-200 text-slate-700 font-black rounded-xl uppercase text-xs hover:bg-slate-300 transition-colors shadow-sm hidden flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><path d="M21 13v-1c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v1"/><path d="M16 11a4 4 0 1 1-8 0"/></svg>
+                    Cambiar Lente / Cámara
+                </button>
                 
                 <div class="flex gap-2 w-full mt-4">
                     <button type="button" onclick="cerrarScanner()" class="flex-1 py-3 bg-slate-200 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-300 transition-colors shadow-sm">Cancelar</button>
-                    <!-- BOTÓN INDICADOR AUTOMÁTICO (NO CLICKEABLE) -->
                     <div class="flex-[2] py-3 bg-indigo-100 text-indigo-700 font-black rounded-xl uppercase text-xs shadow-inner flex items-center justify-center gap-2">
                         <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                         Escaneo Automático...
@@ -398,7 +378,6 @@
         </div>
     </div>
 
-    <!-- Modal Configuración GitHub -->
     <div id="modal-github" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
@@ -424,12 +403,10 @@
                 </div>
                 <div class="pt-4 flex flex-col gap-3">
                     <button onclick="saveGithubConfig()" class="w-full py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs shadow-md hover:bg-indigo-700 transition-colors">Guardar y Conectar</button>
-                    <!-- BOTÓN FORZAR SUBIDA / FUSION -->
                     <button onclick="syncToGithub()" class="w-full py-3 bg-blue-100 text-blue-700 font-black rounded-xl uppercase text-xs hover:bg-blue-200 transition-colors border border-blue-200 flex justify-center items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         Fusionar y Subir a Nube
                     </button>
-                    <!-- BOTÓN FORZAR DESCARGA / FUSION -->
                     <button onclick="syncFromGithub(false)" class="w-full py-3 bg-emerald-100 text-emerald-700 font-black rounded-xl uppercase text-xs hover:bg-emerald-200 transition-colors border border-emerald-200 flex justify-center items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Bajar y Fusionar Datos
@@ -439,7 +416,6 @@
         </div>
     </div>
     
-    <!-- Modal Registro/Edición Cliente -->
     <div id="modal-cliente" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -490,7 +466,6 @@
         </div>
     </div>
 
-    <!-- Modal Registro Zapato / Pedido (z-50) -->
     <div id="modal-zapato" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -573,7 +548,6 @@
     </div>
 
 
-    <!-- Modal Estado de Cuenta / Historial -->
     <div id="modal-estado-cuenta" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -585,7 +559,6 @@
             </div>
             
             <div class="overflow-y-auto custom-scrollbar p-6 space-y-6">
-                <!-- Tarjeta Resumen y Botones -->
                 <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 flex flex-col lg:flex-row justify-between items-center gap-4 shadow-inner">
                     <div class="w-full lg:w-auto text-center lg:text-left">
                         <p class="text-[10px] font-black text-indigo-800 uppercase tracking-widest">Deuda Restante</p>
@@ -626,7 +599,6 @@
         </div>
     </div>
 
-    <!-- Modal Vender Zapato (Asignar y Cobrar desde Bodega / Apartado) -->
     <div id="modal-asignar" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 bg-emerald-50">
@@ -653,7 +625,6 @@
         </div>
     </div>
 
-    <!-- Modal Vender Zapato directamente desde el Cliente -->
     <div id="modal-vender-cliente" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 bg-emerald-50">
@@ -679,7 +650,6 @@
         </div>
     </div>
 
-    <!-- Modal Abono y WhatsApp -->
     <div id="modal-abono" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
             <div class="p-6 border-b border-slate-100 bg-indigo-50">
@@ -720,7 +690,6 @@
         </div>
     </div>
 
-    <!-- ================= SCRIPT LOGICA ================= -->
     <script>
         // ======= ESTADO GLOBAL =======
         let dbZapatos = JSON.parse(localStorage.getItem('db_zapatos')) || [];
@@ -2731,6 +2700,10 @@
         
         let ocrWorker = null;
         let ocrAutoMode = false;
+        
+        // NUEVAS VARIABLES PARA MÚLTIPLES CÁMARAS
+        let camarasDisponibles = [];
+        let indiceCamaraActual = 0;
 
         async function abrirScanner() {
             document.getElementById('modal-scanner').classList.remove('hidden');
@@ -2742,11 +2715,21 @@
                 
                 // 2. Leer la lista de todas las cámaras conectadas
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoInputs = devices.filter(device => device.kind === 'videoinput');
+                camarasDisponibles = devices.filter(device => device.kind === 'videoinput');
                 
+                // Mostrar botón de cambio de cámara si hay más de una
+                const btnCambiar = document.getElementById('btn-cambiar-camara');
+                if (btnCambiar) {
+                    if (camarasDisponibles.length > 1) {
+                        btnCambiar.classList.remove('hidden');
+                    } else {
+                        btnCambiar.classList.add('hidden');
+                    }
+                }
+
                 // 3. Filtrar para evitar la cámara "Ultra Gran Angular", "Macro", etc.
                 let selectedCameraId = null;
-                const backCameras = videoInputs.filter(d => 
+                const backCameras = camarasDisponibles.filter(d => 
                     d.label.toLowerCase().includes('back') || 
                     d.label.toLowerCase().includes('trasera') || 
                     d.label.toLowerCase().includes('environment') ||
@@ -2768,22 +2751,22 @@
                     } else {
                         selectedCameraId = backCameras[0].deviceId;
                     }
-                } else if (videoInputs.length > 1) {
+                } else if (camarasDisponibles.length > 1) {
                     // Si no tienen label o no coinciden, tomamos la última (suele ser la trasera en móviles)
-                    selectedCameraId = videoInputs[videoInputs.length - 1].deviceId;
+                    selectedCameraId = camarasDisponibles[camarasDisponibles.length - 1].deviceId;
+                }
+
+                // Obtener el índice inicial
+                if (selectedCameraId) {
+                    indiceCamaraActual = camarasDisponibles.findIndex(c => c.deviceId === selectedCameraId);
+                    if (indiceCamaraActual === -1) indiceCamaraActual = 0;
                 }
 
                 // 4. Detener el stream temporal
                 tempStream.getTracks().forEach(track => track.stop());
 
-                // 5. Iniciar la cámara con el ID exacto de la cámara principal
-                let constraints = { video: { facingMode: "environment" } }; // Valor por defecto
-                if (selectedCameraId) {
-                    constraints = { video: { deviceId: { exact: selectedCameraId } } };
-                }
-
-                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = videoStream;
+                // 5. Iniciar la cámara
+                await iniciarStreamLente(selectedCameraId);
 
                 // Inicializamos el worker de Tesseract UNA sola vez
                 if (!ocrWorker) {
@@ -2798,6 +2781,38 @@
                 console.error("Error cámara:", err);
                 alert("No se pudo acceder a la cámara. Revisa los permisos.");
                 cerrarScanner();
+            }
+        }
+
+        // FUNCIÓN NUEVA PARA INICIAR EL STREAM
+        async function iniciarStreamLente(deviceId) {
+            const video = document.getElementById('ocr-video');
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+            let constraints = { video: { facingMode: "environment" } };
+            if (deviceId) {
+                constraints = { video: { deviceId: { exact: deviceId } } };
+            }
+            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = videoStream;
+        }
+
+        // FUNCIÓN NUEVA PARA CAMBIAR CÁMARA MANUALMENTE
+        async function cambiarCamara() {
+            if (camarasDisponibles.length <= 1) return;
+            
+            indiceCamaraActual = (indiceCamaraActual + 1) % camarasDisponibles.length;
+            const nuevaCamara = camarasDisponibles[indiceCamaraActual];
+            
+            document.getElementById('ocr-status').innerText = "🔄 Cambiando lente...";
+            
+            try {
+                await iniciarStreamLente(nuevaCamara.deviceId);
+                document.getElementById('ocr-status').innerText = "✅ Listo. Lente cambiado.";
+            } catch (err) {
+                console.error("Error al cambiar de cámara:", err);
+                document.getElementById('ocr-status').innerHTML = `<span class="text-rose-600">❌ Error al cambiar cámara.</span>`;
             }
         }
 
@@ -2899,6 +2914,4 @@
 
     </script>
 </body>
-</html>
-
-
+    </html>
