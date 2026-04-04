@@ -10,9 +10,12 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- LIBRERÍAS NATIVAS DE PDF (Reemplazan a html2pdf para evitar recortes) -->
+    <!-- LIBRERÍAS NATIVAS DE PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- LIBRERÍA DE RECONOCIMIENTO DE TEXTO / OCR (NUEVO) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap');
@@ -170,6 +173,10 @@
                 <h2 class="text-2xl font-black text-slate-800 leading-none">Encargos por Surtir</h2>
             </div>
             <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <button onclick="abrirScanner()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-4 sm:py-0 rounded-2xl font-black text-xs shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors border border-indigo-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                    Escanear Llegada
+                </button>
                 <button onclick="openZapatoModal('nuevo', 'Pedido')" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-4 sm:py-0 rounded-2xl font-black text-xs shadow-lg uppercase tracking-wider flex justify-center items-center gap-2 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
                     Registrar Encargo
@@ -353,6 +360,42 @@
     </main>
 
     <!-- ================= MODALES GLOBALES ================= -->
+
+    <!-- Modal Escáner OCR de Etiquetas -->
+    <div id="modal-scanner" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-200">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
+                <h2 class="text-xl font-black flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                    Leer Etiqueta (OCR)
+                </h2>
+                <button type="button" onclick="cerrarScanner()" class="text-slate-400 hover:text-white font-bold text-2xl leading-none cursor-pointer">&times;</button>
+            </div>
+            <div class="p-4 flex flex-col items-center bg-slate-50">
+                
+                <!-- Contenedor del lector de cámara -->
+                <div class="w-full rounded-2xl overflow-hidden bg-black shadow-inner min-h-[250px] max-h-[300px] border-4 border-slate-800 relative flex items-center justify-center">
+                    <video id="ocr-video" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <!-- Guía visual -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="w-3/4 h-16 border-2 border-dashed border-emerald-500 rounded-lg bg-emerald-500/20"></div>
+                    </div>
+                </div>
+                
+                <p id="ocr-status" class="text-xs text-slate-500 font-bold mt-4 text-center px-4 h-10 flex items-center justify-center">
+                    Apunta la cámara a los números del modelo y presiona Capturar.
+                </p>
+                
+                <div class="flex gap-2 w-full mt-4">
+                    <button type="button" onclick="cerrarScanner()" class="flex-1 py-3 bg-slate-200 text-slate-600 font-black rounded-xl uppercase text-xs hover:bg-slate-300 transition-colors shadow-sm">Cancelar</button>
+                    <button type="button" id="btn-analizar-ocr" onclick="analizarImagen()" class="flex-[2] py-3 bg-indigo-600 text-white font-black rounded-xl uppercase text-xs hover:bg-indigo-700 transition-colors shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        Capturar y Leer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Configuración GitHub -->
     <div id="modal-github" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm">
@@ -2679,6 +2722,105 @@
             }
 
             doc.save(`Corte_${mesSeleccionado}.pdf`);
+        }
+
+        // ======================= ESCÁNER OCR DE ETIQUETAS (NUEVO) =======================
+        let videoStream = null;
+        let isProcessingOCR = false;
+
+        async function abrirScanner() {
+            document.getElementById('modal-scanner').classList.remove('hidden');
+            document.getElementById('ocr-status').innerText = "Apunta la cámara a los números del modelo y presiona Capturar.";
+            const video = document.getElementById('ocr-video');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = videoStream;
+            } catch (err) {
+                alert("No se pudo acceder a la cámara. Revisa los permisos.");
+                cerrarScanner();
+            }
+        }
+
+        function cerrarScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            document.getElementById('modal-scanner').classList.add('hidden');
+        }
+
+        async function analizarImagen() {
+            if (isProcessingOCR) return;
+            const video = document.getElementById('ocr-video');
+            if (!video.videoWidth) return;
+
+            isProcessingOCR = true;
+            const statusEl = document.getElementById('ocr-status');
+            const btnAnalizar = document.getElementById('btn-analizar-ocr');
+            
+            btnAnalizar.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Congelar frame de la cámara
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            statusEl.innerHTML = "⏳ Analizando números impresos...<br><span class='text-[9px]'>La primera vez del día tomará unos 3 segundos</span>";
+
+            try {
+                const result = await Tesseract.recognize(canvas, 'eng');
+                const textoDetectado = result.data.text.toUpperCase();
+                const numerosDetectados = textoDetectado.match(/\d+/g) || [];
+                
+                let pedidoEncontrado = null;
+                let pedidosPendientes = dbZapatos.filter(z => z.estado === 'Pedido');
+                
+                for (let z of pedidosPendientes) {
+                    let modelo = z.modelo.toUpperCase().trim();
+                    let modeloSinEspacios = modelo.replace(/\s+/g, '');
+                    let soloNumerosModelo = modelo.replace(/\D/g, '');
+
+                    // Comparamos el modelo exacto con el texto que vio la cámara
+                    if (textoDetectado.includes(modelo) || (modeloSinEspacios.length > 2 && textoDetectado.replace(/\s+/g,'').includes(modeloSinEspacios))) {
+                        pedidoEncontrado = z; break;
+                    }
+                    
+                    // Comparamos si la cámara captó la secuencia de números específica de tu modelo
+                    if (soloNumerosModelo.length >= 2 && numerosDetectados.includes(soloNumerosModelo)) {
+                        pedidoEncontrado = z; break;
+                    }
+                }
+
+                if (pedidoEncontrado) {
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    const confirmMessage = `📦 ¡ENCARGO ENCONTRADO!\n\nModelo: ${pedidoEncontrado.modelo}\nMarca: ${pedidoEncontrado.marca || 'S/M'}\nTienda: ${pedidoEncontrado.tienda}\nTalla: ${pedidoEncontrado.talla}\nColor: ${pedidoEncontrado.color}\n\nCliente esperado: ${pedidoEncontrado.clienteId ? getClienteNombre(pedidoEncontrado.clienteId) : 'Libre'}\n\n¿Confirmar llegada y mandarlo a Bodega?`;
+                    
+                    if(confirm(confirmMessage)) {
+                        cerrarScanner();
+                        pedidoEncontrado.estado = 'Bodega';
+                        pedidoEncontrado.fechaLlegada = fmtLocal(new Date());
+                        pedidoEncontrado.ultimaModificacion = Date.now();
+                        localStorage.setItem('db_zapatos', JSON.stringify(dbZapatos));
+                        actualizarTodoYRenderizar();
+                        setTimeout(() => { syncToGithub(); }, 100);
+                        mostrarNotificacionSync("✅ Entró a Bodega: " + pedidoEncontrado.modelo, false);
+                        setTimeout(ocultarNotificacionSync, 3000);
+                    } else {
+                        statusEl.innerText = "Apunta a los números del modelo y presiona Capturar.";
+                    }
+                } else {
+                    if (navigator.vibrate) navigator.vibrate([100, 100, 100]);
+                    statusEl.innerHTML = `<span class="text-rose-600">❌ No se encontró el modelo en los pedidos.</span><br><span class="text-[9px] text-slate-400">Lectura de cámara: ${numerosDetectados.slice(0,4).join(', ')}</span>`;
+                }
+            } catch(e) {
+                console.error(e);
+                statusEl.innerHTML = `<span class="text-rose-600">❌ Error al leer la imagen. Intenta de nuevo acercando la caja.</span>`;
+            } finally {
+                isProcessingOCR = false;
+                btnAnalizar.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
 
     </script>
