@@ -1617,7 +1617,7 @@
                 }).join('');
 
                 if (abonosOcultos > 0) {
-                    abonosContainer.innerHTML += `<div class="mt-2 text-center p-2 text-[10px] font-bold text-slate-400 bg-slate-50 rounded-xl border border-slate-100">+ ${abonosOcultos} registro(s) antiguo(s) oculto(s) (>6m)</div>`;
+                    abonosContainer.innerHTML += `<div class="mt-2 text-center p-2 text-[10px] font-bold text-slate-400 bg-slate-50 rounded-xl border border-slate-100">+ ${abonosOcultos} registro(s) antiguo(s) oculto(s) (>6m)</div></div>`;
                 }
             }
 
@@ -2725,11 +2725,10 @@
             doc.save(`Corte_${mesSeleccionado}.pdf`);
         }
 
-        // ======================= ESCÁNER OCR DE ETIQUETAS (AUTOMÁTICO) =======================
+        // ======================= ESCÁNER OCR DE ETIQUETAS (AUTOMÁTICO MEJORADO) =======================
         let videoStream = null;
         let isProcessingOCR = false;
         
-        // --- NUEVAS VARIABLES GLOBALES PARA OCR AUTOMÁTICO ---
         let ocrWorker = null;
         let ocrAutoMode = false;
 
@@ -2738,10 +2737,55 @@
             document.getElementById('ocr-status').innerHTML = "⏳ Inicializando motor de lectura...<br><span class='text-[9px]'>Esto solo toma unos segundos la primera vez.</span>";
             const video = document.getElementById('ocr-video');
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                // 1. Pedir permiso genérico primero para poder leer los nombres (labels) de las cámaras
+                let tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                
+                // 2. Leer la lista de todas las cámaras conectadas
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoInputs = devices.filter(device => device.kind === 'videoinput');
+                
+                // 3. Filtrar para evitar la cámara "Ultra Gran Angular", "Macro", etc.
+                let selectedCameraId = null;
+                const backCameras = videoInputs.filter(d => 
+                    d.label.toLowerCase().includes('back') || 
+                    d.label.toLowerCase().includes('trasera') || 
+                    d.label.toLowerCase().includes('environment') ||
+                    d.label.toLowerCase().includes('0') // En Android a veces la principal es la 0
+                );
+
+                if (backCameras.length > 0) {
+                    // Excluimos explícitamente las lentes secundarias (Ultra wide, Macro, Telephoto)
+                    const mainCameras = backCameras.filter(d => 
+                        !d.label.toLowerCase().includes('ultra') && 
+                        !d.label.toLowerCase().includes('wide') && 
+                        !d.label.toLowerCase().includes('gran angular') && 
+                        !d.label.toLowerCase().includes('macro') &&
+                        !d.label.toLowerCase().includes('tele')
+                    );
+                    
+                    if (mainCameras.length > 0) {
+                        selectedCameraId = mainCameras[0].deviceId;
+                    } else {
+                        selectedCameraId = backCameras[0].deviceId;
+                    }
+                } else if (videoInputs.length > 1) {
+                    // Si no tienen label o no coinciden, tomamos la última (suele ser la trasera en móviles)
+                    selectedCameraId = videoInputs[videoInputs.length - 1].deviceId;
+                }
+
+                // 4. Detener el stream temporal
+                tempStream.getTracks().forEach(track => track.stop());
+
+                // 5. Iniciar la cámara con el ID exacto de la cámara principal
+                let constraints = { video: { facingMode: "environment" } }; // Valor por defecto
+                if (selectedCameraId) {
+                    constraints = { video: { deviceId: { exact: selectedCameraId } } };
+                }
+
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = videoStream;
 
-                // Inicializamos el worker de Tesseract UNA sola vez para evitar congelamientos en el bucle
+                // Inicializamos el worker de Tesseract UNA sola vez
                 if (!ocrWorker) {
                     ocrWorker = await Tesseract.createWorker('eng');
                 }
@@ -2751,6 +2795,7 @@
                 loopEscaneoAutomatico();
 
             } catch (err) {
+                console.error("Error cámara:", err);
                 alert("No se pudo acceder a la cámara. Revisa los permisos.");
                 cerrarScanner();
             }
@@ -2855,4 +2900,5 @@
     </script>
 </body>
 </html>
+
 
